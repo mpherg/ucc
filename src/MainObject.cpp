@@ -20,7 +20,7 @@ MainObject::MainObject()
 	isDiff = false;				// default not differencing files
 	outDir = "";				// default output directory is current directory
 	duplicate_threshold = 0;	// default duplicate files threshold
-	lsloc_truncate = 10000;		// default LSLOC maximum characters for truncation (0=no truncation)
+	lsloc_truncate = DEFAULT_TRUNCATE;	// default LSLOC maximum characters for truncation (0=no truncation)
 	print_cmplx = true;			// default print complexity and keyword counts
 	print_csv = true;			// default print CSV report files
 	print_ascii = false;		// default don't print ASCII text report files
@@ -122,6 +122,12 @@ MainObject::MainObject()
 	tmp = new CJavascriptColdFusionCounter;
 	CounterForEachLanguage.insert(map<int, CCodeCounter*>::value_type(JAVASCRIPT_CFM,tmp));
 
+	tmp = new CMakefileCounter;
+	CounterForEachLanguage.insert(map<int, CCodeCounter*>::value_type(MAKEFILE		,tmp));
+
+	tmp = new CMatlabCounter;
+	CounterForEachLanguage.insert(map<int, CCodeCounter*>::value_type(MATLAB		,tmp));
+
 	tmp = new CNeXtMidasCounter;
 	CounterForEachLanguage.insert(map<int, CCodeCounter*>::value_type(NEXTMIDAS		,tmp));
 
@@ -176,6 +182,12 @@ MainObject::MainObject()
 	tmp = new CVbsColdFusionCounter;
 	CounterForEachLanguage.insert(map<int, CCodeCounter*>::value_type(VBS_CFM		,tmp));
 
+	tmp = new CVerilogCounter;
+	CounterForEachLanguage.insert(map<int, CCodeCounter*>::value_type(VERILOG		,tmp));
+
+	tmp = new CVHDLCounter;
+	CounterForEachLanguage.insert(map<int, CCodeCounter*>::value_type(VHDL			,tmp));
+	
 	tmp = new CXmlCounter;
 	CounterForEachLanguage.insert(map<int, CCodeCounter*>::value_type(XML			,tmp));
 
@@ -198,6 +210,18 @@ MainObject::~MainObject()
 /*!
 * Resets all count lists (e.g., directive_count, data_name_count, etc.).
 */
+void MainObject::SetCounterOptions()
+{
+	if (lsloc_truncate != DEFAULT_TRUNCATE)
+	{
+		for (map<int, CCodeCounter*>::iterator iter = CounterForEachLanguage.begin(); iter != CounterForEachLanguage.end(); iter++)		
+			iter->second->lsloc_truncate = lsloc_truncate;
+	}	
+}
+
+/*!
+* Resets all count lists (e.g., directive_count, data_name_count, etc.).
+*/
 void MainObject::ResetCounterCounts()
 {
 	for (map<int, CCodeCounter*>::iterator iter = CounterForEachLanguage.begin(); iter != CounterForEachLanguage.end(); iter++)
@@ -212,7 +236,7 @@ void MainObject::ResetCounterCounts()
 void MainObject::UpdateCounterCounts(bool useListA)
 {
 	int i;
-	unsigned int class_type;
+	ClassType class_type;
 	WebType webType;
 	SourceFileList::iterator its;
 	SourceFileList* mySourceFile = (useListA) ? &SourceFileA : &SourceFileB;
@@ -404,6 +428,7 @@ int MainObject::MainProcess(int argc, char *argv[])
 	// parse the command line input
 	if (!ParseCommandLine(argc, argv))
 		ShowUsage();
+	SetCounterOptions();
 
 	// generate user-defined language extension map
 	if (userExtMapFile.length() != 0)
@@ -413,20 +438,20 @@ int MainObject::MainProcess(int argc, char *argv[])
 	if (listFilesToBeSearched.size() != 0)
 		CUtil::ListAllFiles(dirnameA, listFilesToBeSearched, listFileNames, followSymLinks);
 	
-	cout << "Reading source files..."; 
+	cout << "Reading source files..." << flush; 
 	if (!ReadAllFiles(listFileNames, BaselineFileName1))
 		return 0;
 	cout << ".......................DONE" << endl;
 
 	// count files
-	cout << "Performing files analysis and counting...";
+	cout << "Performing files analysis and counting..." << flush;
 	ProcessSourceList();
 	if (duplicate_threshold >= 0.0)
 		FindDuplicateFiles(SourceFileA, duplicateFilesInA1, duplicateFilesInA2);
 	UpdateCounterCounts();
 
 	// print the counting results (SLOC counts and complexity counts)
-	cout << "Generating results to files...";
+	cout << "Generating results to files..." << flush;
 	if (print_unified)
 		PrintTotalCountResults(true, "", &duplicateFilesInA2);
 	else
@@ -469,7 +494,10 @@ int MainObject::ParseCommandLine(int argc, char *argv[])
 	for (i = 1; i < argc; i++)
 	{
 		arg = argv[i];
-		cmdStr += " " + arg;
+		if (arg.find(' ') != string::npos)	// quote strings containing spaces
+			cmdStr += " \"" + arg + "\"";
+		else
+			cmdStr += " " + arg;
 	}
 	cmdLine = cmdStr;
 
@@ -984,7 +1012,6 @@ void MainObject::ReadUserExtMapping(const string &extMapFile)
 	string line, str;
 	string language;
 	string extension;
-	char *context = NULL;
 	int flag;
 	string token;
 	size_t pos1, pos2;
@@ -1065,7 +1092,7 @@ void MainObject::ReadUserExtMapping(const string &extMapFile)
 */
 void MainObject::CreateExtMap()
 {
-	size_t i, j;
+	int i, j;
 	string token, lang_name;
 	bool found, updateWeb = false;
 	CCodeCounter *langCounter;
@@ -1078,12 +1105,12 @@ void MainObject::CreateExtMap()
 		// check for a counter for the specified language
 		lang_name = CUtil::ToLower(iter->first);
 		langCounter = NULL;
-		for (i = 0; i < CounterForEachLanguage.size(); i++)
+		for (i = 0; i < (int)CounterForEachLanguage.size(); i++)
 		{
 			if (CounterForEachLanguage[i]->classtype == WEB)
 			{
 				found = false;
-				for (j = 0; j < webCounter->web_lang_names.size(); j++)
+				for (j = 0; j < (int)webCounter->web_lang_names.size(); j++)
 				{
 					if (lang_name.compare(CUtil::ToLower(webCounter->web_lang_names[j])) == 0)
 					{
@@ -1160,7 +1187,6 @@ int MainObject::ReadAllFiles(StringVector &inputFileVector, string const &inputF
 {
 	filemap fmap;
 	results r;
-	r.lsloc_truncate = lsloc_truncate;
 	std::vector<std::string>::iterator itVectorData;
 	string fileName, clearCaseCroppedFile;
 	WebType webType;
@@ -1168,7 +1194,7 @@ int MainObject::ReadAllFiles(StringVector &inputFileVector, string const &inputF
 	bool lineTooLong;
 	bool isErr = false;
 	unsigned int lineNum = 0;
-	unsigned int fileclass;
+	ClassType fileclass;
 	CWebCounter *webCounter;
 
     // if the size of the vector is zero read from the files
@@ -1407,6 +1433,7 @@ void MainObject::ProcessSourceList(bool useListA)
 	for (SourceFileList::iterator i = mySrcFileList->begin(); i != mySrcFileList->end(); i++)
 	{
 		// handle any exception that may occur un-handled in the counting functions
+		embFile = string::npos;
 		try
 		{
 			embFile = i->second.file_name.find(EMBEDDED_FILE_PREFIX);
@@ -1428,7 +1455,10 @@ void MainObject::ProcessSourceList(bool useListA)
 				ss << "Warning: Truncated ";
 				ss << i->second.trunc_lines;
 				ss << " line(s) in file (";
-				ss << i->second.file_name;
+				if (embFile != string::npos)
+					ss << i->second.file_name.substr(0, embFile);
+				else
+					ss << i->second.file_name;
 				ss << ")";
 				string err = ss.str();
 				errList += err + "\n";
@@ -1453,7 +1483,10 @@ void MainObject::ProcessSourceList(bool useListA)
 		catch (...)
 		{
 			string err = "Error: Unable to count file (";
-			err += i->second.file_name;
+			if (embFile != string::npos)
+				err += i->second.file_name.substr(0, embFile);
+			else
+				err += i->second.file_name;
 			err += ")";
 			errList += err + "\n";
 			CUtil::AddError(err);
@@ -1582,7 +1615,7 @@ void MainObject::WriteUncountedFile(const string &msg, const string &uncFile, bo
 *
 * \return language class type
 */
-unsigned int MainObject::DecideLanguage(const string &file_name, bool setCounter)
+ClassType MainObject::DecideLanguage(const string &file_name, bool setCounter)
 {
 	bool found = false;
 	for (map<int, CCodeCounter*>::iterator iter = CounterForEachLanguage.begin(); iter != CounterForEachLanguage.end(); iter++)
@@ -1592,7 +1625,7 @@ unsigned int MainObject::DecideLanguage(const string &file_name, bool setCounter
 			found = true;
 			counter = iter->second;
 			if (setCounter && print_cmplx)
-				counter->isPrintKeyword = true;
+				counter->print_cmplx = true;
 			break;
 		}
 	}
@@ -1626,7 +1659,7 @@ bool MainObject::IsSupportedFileExtension(const string &file_name)
 *
 * \return language name
 */
-string MainObject::GetLanguageName(unsigned int class_type, const string &file_name) 
+string MainObject::GetLanguageName(ClassType class_type, const string &file_name) 
 {
 	if (class_type == WEB && file_name.length() > 0)
 	{
@@ -1634,7 +1667,7 @@ string MainObject::GetLanguageName(unsigned int class_type, const string &file_n
 		WebType webType = webCounter->GetWebType(file_name);
 		return(webCounter->GetWebLangName(webType));
 	}
-	else if (class_type < CounterForEachLanguage.size())
+	else if (class_type < (int)CounterForEachLanguage.size())
 		return CounterForEachLanguage[class_type]->language_name;
 	else
 		return DEF_LANG_NAME;
@@ -1656,8 +1689,8 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 	ofstream* pout_csv;
 	TotalValueMap total;
 	WebTotalValueMap webtotal;
-	unsigned int class_type;
 	StringVector::iterator sit;
+	ClassType class_type;
 	CWebCounter *webCounter;
 	WebType webType;
 
@@ -1774,6 +1807,8 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 						break;
 					case PHP:
 						r_php = i->second;
+						break;
+					default:
 						break;
 					}
 				}
@@ -1920,6 +1955,8 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 						break;
 					case JAVA_JSP:
 						r_java = i->second;
+						break;
+					default:
 						break;
 					}
 				}
@@ -2074,6 +2111,8 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 						break;
 					case CSHARP_ASP_S:
 						r_css = i->second;
+						break;
+					default:
 						break;
 					}
 				}
@@ -2252,6 +2291,8 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 					case CSHARP_XML:
 						r_cs = i->second;
 						break;
+					default:
+						break;
 					}
 				}
 				r_xml.SLOC_lines[PHY] = r_xml.exec_lines[PHY] + r_xml.data_lines[PHY];
@@ -2400,6 +2441,8 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 						break;
 					case CFSCRIPT:
 						r_cfs = i->second;
+						break;
+					default:
 						break;
 					}
 				}
@@ -2578,6 +2621,8 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 						break;
 					case CSHARP_HTML:
 						r_cs = i->second;
+						break;
+					default:
 						break;
 					}
 				}
@@ -4474,14 +4519,14 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 		StringVector::iterator iexe;
 
 		// display keywords counts
-		unsigned int ty;
+		ClassType ty;
 		for (map<int, CCodeCounter*>::iterator iter = ++CounterForEachLanguage.begin(); iter != CounterForEachLanguage.end(); iter++)
 		{
 			if (iter->second->directive.size() == 0 && iter->second->data_name_list.size() == 0 && iter->second->exec_name_list.size()  == 0)
 				continue;
 			else if (total.count(iter->second->classtype) == 0)
 			{
-				if (iter->second->isPrintKeyword && (excludeFiles ||
+				if (iter->second->print_cmplx && (excludeFiles ||
 					(useListA && iter->second->total_dupFilesA > 0) || (!useListA && iter->second->total_dupFilesB > 0)))
 				{
 					ty = iter->second->classtype;
@@ -4670,7 +4715,7 @@ int MainObject::PrintCountResults(bool useListA, const string &outputFileNamePre
 		iter->second->CloseOutputStream();
 
 	// print out language count summary
-	if (!PrintCountSummary(total, webtotal, useListA, outputFileNamePrePend))
+	if (!PrintCountSummary(total, webtotal, outputFileNamePrePend))
 		return 0;
 
 	return 1;
@@ -4744,13 +4789,13 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 	WebTotalValueMap webtotal;
 	TotalValue allLang;
 	AllWebTotalValue allWebLang;
-	unsigned int totalNonDupFileA = 0, totalNonDupWebFileA = 0, totalFileA = 0, totalWebFileA = 0;
-	unsigned int totalNonDupFileB = 0, totalNonDupWebFileB = 0, totalFileB  = 0, totalWebFileB = 0;
+	unsigned int totalNonDupFileA = 0, totalFileA = 0;
+	unsigned int totalNonDupFileB = 0, totalFileB  = 0;
 	bool printHeader = false;
 	unsigned int tlsloc = 0, tpsloc = 0;
-	float tslocrat = 0.0f;
-	unsigned int class_type;
+	float tslocrat;
 	StringVector::iterator sit;
+	ClassType class_type;
 	CWebCounter *webCounter;
 	WebType webType;
 
@@ -5251,6 +5296,8 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 					case PHP:
 						r_php = i->second;
 						break;
+					default:
+						break;
 					}
 				}
 				r_htm.SLOC_lines[PHY] = r_htm.exec_lines[PHY] + r_htm.data_lines[PHY];
@@ -5509,6 +5556,8 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 						break;
 					case JAVA_JSP:
 						r_java = i->second;
+						break;
+					default:
 						break;
 					}
 				}
@@ -5776,6 +5825,8 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 						break;
 					case CSHARP_ASP_S:
 						r_css = i->second;
+						break;
+					default:
 						break;
 					}
 				}
@@ -6060,6 +6111,8 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 					case CSHARP_XML:
 						r_cs = i->second;
 						break;
+					default:
+						break;
 					}
 				}
 				r_xml.SLOC_lines[PHY] = r_xml.exec_lines[PHY] + r_xml.data_lines[PHY];
@@ -6322,6 +6375,8 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 						break;
 					case CFSCRIPT:
 						r_cfs = i->second;
+						break;
+					default:
 						break;
 					}
 				}
@@ -6607,6 +6662,8 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 					case CSHARP_HTML:
 						r_cs = i->second;
 						break;
+					default:
+						break;
 					}
 				}
 				r_htm.SLOC_lines[PHY] = r_htm.exec_lines[PHY] + r_htm.data_lines[PHY];
@@ -6849,7 +6906,7 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 	// display summary for WEB languages
 	totalNonDupFileA = 0; totalFileA = 0;
 	totalNonDupFileB = 0; totalFileB = 0;
-	tslocrat = 0.0f; tpsloc = 0; tlsloc = 0;
+	tpsloc = 0; tlsloc = 0;
 	for (WebTotalValueMap::iterator itto = webtotal.begin(); itto != webtotal.end(); itto++)
 	{
 		webCounter = (CWebCounter*)CounterForEachLanguage[WEB];
@@ -7443,14 +7500,14 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 		StringVector::iterator iexe;
 
 		// display keyword counts
-		unsigned int ty;
+		ClassType ty;
 		for (map<int, CCodeCounter*>::iterator iter = ++CounterForEachLanguage.begin(); iter != CounterForEachLanguage.end(); iter++)
 		{
 			if (iter->second->directive.size() == 0 && iter->second->data_name_list.size() == 0 && iter->second->exec_name_list.size()  == 0)
 				continue;
 			else if (total.count(iter->second->classtype) == 0)
 			{
-				if (iter->second->isPrintKeyword && (excludeFiles ||
+				if (iter->second->print_cmplx && (excludeFiles ||
 					(useListA && iter->second->total_dupFilesA > 0) || (!useListA && iter->second->total_dupFilesB > 0)))
 				{
 					ty = iter->second->classtype;
@@ -7611,7 +7668,7 @@ int MainObject::PrintTotalCountResults(bool useListA, const string &outputFileNa
 	CloseTotalOutputStream();
 
 	// print out language count summary
-	if (!PrintCountSummary(total, webtotal, useListA, outputFileNamePrePend))
+	if (!PrintCountSummary(total, webtotal, outputFileNamePrePend))
 		return 0;
 
 	return 1;
@@ -7672,17 +7729,16 @@ void MainObject::CloseOutputSummaryStream()
 *
 * \param total map of count totals
 * \param webtotal map of web language count totals
-* \param useListA use file list A? (otherwise use list B)
 * \param outputFileNamePrePend name to prepend to the output file
 *
 * \return method status
 */
 int MainObject::PrintCountSummary(TotalValueMap &total, WebTotalValueMap &webtotal,
-	bool useListA, const string &outputFileNamePrePend)
+	const string &outputFileNamePrePend)
 {
 	ofstream *pout;
 	ofstream *pout_csv;
-	unsigned int class_type;
+	ClassType class_type;
 	WebType webType;
 	size_t i;
 	unsigned int fCnt, pCnt, lCnt, rCnt, fTot, pTot, lTot;
@@ -8083,7 +8139,7 @@ int MainObject::PrintComplexityResults(bool useListA, const string &outputFileNa
 				{
 					std::stringstream ss;
 					ss << itt2->second.cmplx_nestloop_count[0];
-					for (size_t i = 1; i < itt2->second.cmplx_nestloop_count.size(); i++)
+					for (i = 1; i < itt2->second.cmplx_nestloop_count.size(); i++)
 						ss << "," << itt2->second.cmplx_nestloop_count[i];
 					nestedLoops = ss.str();
 				}
@@ -8544,6 +8600,192 @@ int MainObject::PrintComplexityResults(bool useListA, const string &outputFileNa
 		cplxOutputFile.close();
 	if (print_csv)
 		cplxOutputFileCSV.close();
+
+	// print cyclomatic complexity
+	PrintCyclomaticComplexity(useListA, outputFileNamePrePend, printDuplicates);
+
+	return 1;
+}
+
+/*!
+* Prints the cyclomatic complexity results.
+*
+* \param useListA use file list A? (otherwise use list B)
+* \param outputFileNamePrePend name to prepend to the output file
+* \param printDuplicates print duplicate files? (otherwise print unique files)
+*
+* \return method status
+*/
+int MainObject::PrintCyclomaticComplexity(bool useListA, const string &outputFileNamePrePend, bool printDuplicates) 
+{
+	if (useListA)
+	{
+		if (printDuplicates && duplicateFilesInA2.size() < 1)
+			return 1;
+	}
+	else
+	{
+		if (printDuplicates && duplicateFilesInB2.size() < 1)
+			return 1;
+	}
+
+	SourceFileList* mySourceFile = (useListA) ? &SourceFileA : &SourceFileB;
+	bool found = false;
+
+	// check for counts
+	for (SourceFileList::iterator itt2 = mySourceFile->begin(); itt2 != mySourceFile->end(); itt2++)
+	{
+		if ((!printDuplicates && !itt2->second.duplicate) || (printDuplicates && itt2->second.duplicate))
+		{
+			if (itt2->second.cmplx_cycfunct_count.size() > 0)
+			{
+				found = true;
+				break;
+			}
+		}
+	}
+	if (!found)
+		return 1;
+
+	// open file and print headers
+	ofstream cycCplxOutputFile, cycCplxOutputFileCSV;
+	if (print_ascii || print_legacy)
+	{
+		string cycCplxOutputFileName = outDir + outputFileNamePrePend;
+		cycCplxOutputFileName.append(OUTPUT_FILE_CYC_CPLX);
+		cycCplxOutputFile.open(cycCplxOutputFileName.c_str(), ofstream::out);
+		if (!cycCplxOutputFile.is_open())
+		{
+			string err = "Error: Unable to create file (";
+			err += cycCplxOutputFileName;
+			err += "). Operation aborted";
+			cout << endl << err << endl;
+			CUtil::AddError(err);
+			return 0;
+		}
+
+		CUtil::PrintFileHeader(cycCplxOutputFile, "CYCLOMATIC COMPLEXITY RESULTS", cmdLine);
+
+		cycCplxOutputFile << "Cyclomatic   Risk        Function                                                       |   File" << endl;
+		cycCplxOutputFile << "Complexity               Name                                                           |   Name" << endl;
+		cycCplxOutputFile << "----------------------------------------------------------------------------------------+-----------------------" << endl;
+	}
+	if (print_csv)
+	{
+		string cycCplxOutputFileNameCSV = outDir + outputFileNamePrePend;
+		cycCplxOutputFileNameCSV.append(OUTPUT_FILE_CYC_CPLX_CSV);
+		cycCplxOutputFileCSV.open(cycCplxOutputFileNameCSV.c_str(), ofstream::out);
+		if (!cycCplxOutputFileCSV.is_open())
+		{
+			string err = "Error: Unable to create file (";
+			err += cycCplxOutputFileNameCSV;
+			err += "). Operation aborted";
+			cout << endl << err << endl;
+			CUtil::AddError(err);
+			return 0;
+		}
+
+		CUtil::PrintFileHeader(cycCplxOutputFileCSV, "CYCLOMATIC COMPLEXITY RESULTS", cmdLine);
+		cycCplxOutputFileCSV << "Cyclomatic Complexity,Risk,Function Name,File Name" << endl;
+	}
+
+	// print cyclomatic complexity for each file
+	unsigned int tcc = 0;
+	unsigned int nfunc = 0;
+	for (SourceFileList::iterator itt2 = mySourceFile->begin(); itt2 != mySourceFile->end(); itt2++)
+	{
+		if (itt2->second.file_name.find(EMBEDDED_FILE_PREFIX) != string::npos) continue;
+
+		if ((!printDuplicates && !itt2->second.duplicate) || (printDuplicates && itt2->second.duplicate))
+		{
+			if (print_ascii || print_legacy)
+			{
+				filemap::iterator it;
+				for (it = itt2->second.cmplx_cycfunct_count.begin(); it != itt2->second.cmplx_cycfunct_count.end(); it++)
+				{
+					tcc += (*it).lineNumber;
+					nfunc++;
+					cycCplxOutputFile.setf(ofstream::right);
+					cycCplxOutputFile.width(10);
+					cycCplxOutputFile << (*it).lineNumber;
+					cycCplxOutputFile.unsetf(ofstream::right);
+					cycCplxOutputFile << "   ";
+					cycCplxOutputFile.setf(ofstream::left);
+					cycCplxOutputFile.width(9);
+					if ((*it).lineNumber <= 10)
+						cycCplxOutputFile << "Low";
+					else if ((*it).lineNumber <= 20)
+						cycCplxOutputFile << "Medium";
+					else if ((*it).lineNumber <= 50)
+						cycCplxOutputFile << "High";
+					else
+						cycCplxOutputFile << "Very High";
+					cycCplxOutputFile.unsetf(ofstream::right);
+					cycCplxOutputFile.setf(ofstream::left);
+					cycCplxOutputFile << "   ";
+					cycCplxOutputFile.width(60);
+					cycCplxOutputFile << (*it).line;
+					cycCplxOutputFile << "   |   " << itt2->second.file_name << endl;
+				}
+			}
+			if (print_csv)
+			{
+				filemap::iterator it;
+				for (it = itt2->second.cmplx_cycfunct_count.begin(); it != itt2->second.cmplx_cycfunct_count.end(); it++)
+				{
+					tcc += (*it).lineNumber;
+					nfunc++;
+					cycCplxOutputFileCSV << (*it).lineNumber << ",";
+					if ((*it).lineNumber <= 10)
+						cycCplxOutputFileCSV << "Low,";
+					else if ((*it).lineNumber <= 20)
+						cycCplxOutputFileCSV << "Medium,";
+					else if ((*it).lineNumber <= 50)
+						cycCplxOutputFileCSV << "High,";
+					else
+						cycCplxOutputFileCSV << "Very High,";
+					cycCplxOutputFileCSV << (*it).line << "," << itt2->second.file_name << endl;
+				}
+			}
+		}
+	}
+
+	// print total and average cyclomatic complexity
+	float acc = 0.;
+	if (nfunc > 0)
+		acc = (float)tcc / (float)nfunc;
+	if (print_ascii || print_legacy)
+	{
+		cycCplxOutputFile << "----------------------------------------------------------------------------------------+-----------------------" << endl;
+		cycCplxOutputFile.setf(ofstream::right);
+		cycCplxOutputFile.width(10);
+		cycCplxOutputFile << tcc;
+		cycCplxOutputFile.unsetf(ofstream::right);
+		cycCplxOutputFile << "   Total" << endl;
+		cycCplxOutputFile.setf(ofstream::right);
+		cycCplxOutputFile.setf(ios::fixed,ios::floatfield);
+		cycCplxOutputFile.width(10);
+		cycCplxOutputFile.precision(2);
+		cycCplxOutputFile << acc;
+		cycCplxOutputFile.unsetf(ios::floatfield);
+		cycCplxOutputFile << "   Average";
+	}
+	if (print_csv)
+	{
+		cycCplxOutputFileCSV << endl;
+		cycCplxOutputFileCSV << tcc << ",Total" << endl;		
+		cycCplxOutputFileCSV.setf(ios::fixed,ios::floatfield);
+		cycCplxOutputFileCSV.width(10);
+		cycCplxOutputFileCSV.precision(2);
+		cycCplxOutputFileCSV << acc;
+		cycCplxOutputFileCSV.unsetf(ios::floatfield);
+		cycCplxOutputFileCSV << ",Average" << endl;
+	}
+
+	if (print_ascii || print_legacy)
+		cycCplxOutputFile.close();
+	if (print_csv)
+		cycCplxOutputFileCSV.close();
 
 	return 1;
 }

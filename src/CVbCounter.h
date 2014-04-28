@@ -24,6 +24,7 @@ public:
 protected:
 	virtual int CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmapBak = NULL);
 	virtual int LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak = NULL);
+	int ParseFunctionName(const string &line, string &lastline, StringVector &functionStack, string &functionName);
 
 	StringVector exclude_start_keywords;		//!< SLOC lines excluded from counts starting with keywords
 };

@@ -52,25 +52,26 @@ int DiffTool::diffToolProcess(int argc, char *argv[])
 	// parse the command line input
 	if (!ParseCommandLine(argc, argv))
 		ShowUsage();
+	SetCounterOptions();
 
 	// generate user-defined language extension map
 	if (userExtMapFile.length() != 0)
 		ReadUserExtMapping(userExtMapFile);
 
 	// read the source files
-	cout << "Reading source files...";
+	cout << "Reading source files..." << flush;
 	if (!ReadAllDiffFiles())
 		return 0;
 	cout << ".......................DONE" << endl;
 
 	// match files in BaselineA to BaselineB (does not include web separation files)
-	cout << "Performing files matching...";
+	cout << "Performing files matching..." << flush;
 	MatchBaseLines();
 	PrintMatchedPairs();
 	cout << "..................DONE" << endl;
 
 	// count BaselineA and prepare SLOC for differencing
-	cout << "Performing files analysis and counting: A";
+	cout << "Performing files analysis and counting: A" << flush;
 	ProcessSourceList(true);
 	if (duplicate_threshold >= 0.0)
 		FindDuplicateFiles(SourceFileA, duplicateFilesInA1, duplicateFilesInA2, true);
@@ -97,7 +98,7 @@ int DiffTool::diffToolProcess(int argc, char *argv[])
 	}
 
 	// count BaselineB and prepare SLOC for differencing
-	cout << "Performing files analysis and counting: B";
+	cout << "Performing files analysis and counting: B" << flush;
 	ProcessSourceList(false);
 	if (duplicate_threshold >= 0.0)
 		FindDuplicateFiles(SourceFileB, duplicateFilesInB1, duplicateFilesInB2, true);
@@ -125,7 +126,7 @@ int DiffTool::diffToolProcess(int argc, char *argv[])
 
 	// compare the matched files in BaselineA to BaselineB
 	// perform matching on web separation files since these do not exist when initially matched
-	cout << "Performing files comparison...";
+	cout << "Performing files comparison..." << flush;
 	if (CounterForEachLanguage[WEB]->total_filesA > 0 ||
 		CounterForEachLanguage[WEB]->total_filesB > 0)
 		MatchBaseLines(true);
@@ -167,7 +168,7 @@ int DiffTool::ReadAllDiffFiles()
 * Matches each file between the two baselines with the best possible match.
 * 1. Build a preference list for each file
 *    1a. Preference list is an ordered list of files in the other baseline in order of the quality of the match
-* 2. Run the Gale Shapely algorithm to create a matching
+* 2. Run the Gale-Shapley algorithm to create a matching
 * 3. Files that are unmatched will be paired with an empty file to be compared to
 * Two files are matched if and only if they have the same sort name.
 *
@@ -183,30 +184,42 @@ void DiffTool::MatchBaseLines(bool webSepFilesOnly)
 	if (SourceFileA.size() == 0) 
 	{
 		for (SourceFileList::iterator j = SourceFileB.begin(); j != SourceFileB.end(); j++) 
-		{
 			BaseBPrefs[&(*j)] = NULL;
-		}
 	}
-	// else, it's fine include else here, but not very important
+
+	// create the multimaps that will be used
+	// the key for the map will be the file name
+	SortedPreferenceMapType mapA;
+	SortedPreferenceMapType mapB;
+
+	// build multimap of all the file names for A
+	for (SourceFileList::iterator i = SourceFileA.begin(); i != SourceFileA.end(); i++)
+		mapA.insert(FileNamePair(CUtil::ExtractFilename((*i).second.file_name), &(*i)));
+
+	// build multimap of all the file names for B
+	for (SourceFileList::iterator i = SourceFileB.begin(); i != SourceFileB.end(); i++)
+		mapB.insert(FileNamePair(CUtil::ExtractFilename((*i).second.file_name), &(*i)));
+
 	PreferenceMapType *myAPrefs, *myBPrefs;
 	BaselinePreferenceMapType::iterator sfBIterator;
 	PreferenceStruct myAPS, myBPS;
 	int ourPreference;
-	for (SourceFileList::iterator i = SourceFileA.begin(); i != SourceFileA.end(); i++)
+	for (SortedPreferenceMapType::iterator i = mapA.begin(); i != mapA.end(); i++)
 	{
-		if (webSepFilesOnly && (*i).second.file_name.find(EMBEDDED_FILE_PREFIX) == string::npos)
+		if (webSepFilesOnly && (*i).second->second.file_name.find(EMBEDDED_FILE_PREFIX) == string::npos)
 			continue;
 
 		myBPrefs = new PreferenceMapType;
 
 		// BaselineB
-		for (SourceFileList::iterator j = SourceFileB.begin(); j != SourceFileB.end(); j++)
+		SortedPreferenceMapType::iterator stop_point = mapB.upper_bound(CUtil::ExtractFilename((*i).second->second.file_name));
+		for (SortedPreferenceMapType::iterator j = mapB.lower_bound(CUtil::ExtractFilename((*i).second->second.file_name)); j != stop_point; j++)
 		{
-			if (webSepFilesOnly && (*j).second.file_name.find(EMBEDDED_FILE_PREFIX) == string::npos)
+			if (webSepFilesOnly && (*j).second->second.file_name.find(EMBEDDED_FILE_PREFIX) == string::npos)
 				continue;
 
 			// need to check if this file has a preference list, if so use it, if not create it
-			sfBIterator = BaseBPrefs.find(&(*j));
+			sfBIterator = BaseBPrefs.find((*j).second);
 			if (sfBIterator != BaseBPrefs.end())
 			{
 				// already exists, use it
@@ -219,12 +232,12 @@ void DiffTool::MatchBaseLines(bool webSepFilesOnly)
 			}
 
 			// compare this file to the file from A
-			ourPreference = CompareFileNames((*i).second.file_name, (*j).second.file_name);
+			ourPreference = CompareFileNames((*i).second->second.file_name, (*j).second->second.file_name);
 
 			// update preference lists for both files
-			myBPS.fileElement = &(*j);
+			myBPS.fileElement = (*j).second;
 			myBPS.value = ourPreference;
-			myAPS.fileElement = &(*i);
+			myAPS.fileElement = (*i).second;
 			myAPS.value = ourPreference;
 			myBPrefs->push_back(myBPS);
 			myAPrefs->push_back(myAPS);
@@ -233,19 +246,37 @@ void DiffTool::MatchBaseLines(bool webSepFilesOnly)
 			sort(myAPrefs->begin(), myAPrefs->end(), CustomCMP());
 
 			// save the new values for the BaseBPrefs
-			BaseBPrefs[&(*j)] = myAPrefs;
+			BaseBPrefs[(*j).second] = myAPrefs;
 		}
 
 		// make sure its sorted by preference value
 		sort(myBPrefs->begin(), myBPrefs->end(), CustomCMP());
 
 		// save the new values for the BaseAPrefs
-		BaseAPrefs[&(*i)] = myBPrefs;
+		BaseAPrefs[(*i).second] = myBPrefs;
+	}
+
+	// add empty preference lists for unmatched B files
+	for (SortedPreferenceMapType::iterator j = mapB.begin(); j != mapB.end(); j++)
+	{
+		if (webSepFilesOnly && (*j).second->second.file_name.find(EMBEDDED_FILE_PREFIX) == string::npos)
+			continue;
+
+		// need to check if this file has a preference list, if so use it, if not create it
+		sfBIterator = BaseBPrefs.find((*j).second);
+		if (sfBIterator == BaseBPrefs.end())
+		{
+			// does not exist, create one
+			myBPrefs = new PreferenceMapType;
+
+			// save the new values for the BaseBPrefs
+			BaseBPrefs[(*j).second] = myBPrefs;
+		}
 	}
 
 	// at this point we have a complete sorted preference list for all pairs
 	// we will want to match preferences that have the smallest value as it is actually the value of optimal alignment
-	// now run the Gale Shapley algorithm
+	// now run the Gale-Shapley algorithm
 
 	list<SourceFileElement *> FreeBaseAList;
 	map<SourceFileElement *, PreferenceMapType::iterator> NextSelectionMapBaseA;
@@ -261,9 +292,7 @@ void DiffTool::MatchBaseLines(bool webSepFilesOnly)
 	
 	// do this for completeness later on
 	for (BaselinePreferenceMapType::iterator myI = BaseBPrefs.begin(); myI != BaseBPrefs.end(); myI++)
-	{
 		BaseBMatches[(*myI).first] = NULL;
-	}
 
 	BaselineFileMapType::iterator mLocation;
 	SourceFileElement *myAFilePrime;
@@ -468,14 +497,13 @@ void DiffTool::MatchBaseLines(bool webSepFilesOnly)
 }
 
 /*!
-* Calculates the value for the best possible alignment of file1 and file2.
-* Essentially doing a sequence alignment in linear space via divide and conquer.
+* Calculates the Levenshtein distance between the two file names.
 * Only compare two files that have the same sort name (excluding the path).
 *
 * \param file1 original file
 * \param file2 comparison file
 *
-* \return comparison value
+* \return case-sensitive Levenshtein distance between file names
 */
 int DiffTool::CompareFileNames(const string &file1, const string &file2)
 {
@@ -483,9 +511,16 @@ int DiffTool::CompareFileNames(const string &file1, const string &file2)
 	int mismatchCost = 1;
 
 	if (CUtil::ExtractFilename(file1).compare(CUtil::ExtractFilename(file2)) != 0)
-		return MAX_MISMATCH_COST;
+		return MAX_MISMATCH_COST;	// this should instead be based on the size of file1 and/or file2.
+	// it would be faster to strip off the filenames, since they must match.
 
-	// then need to go through each and initialize two size 2
+	// This function compares the file names, not their contents!
+	// Compute the Levenshtein distance between the two file names
+	// comparison is always case-sensitive, even in Windows
+	//
+	// Initialize an array of size 2 arrays.  This is very inefficient.  It is
+	// much better to define a 1-D array and use an inline function or macro
+	// to simulate two indices.
 	int** B = new int*[(int)file1.size()+1];
 
 	// initialize B[i,0] = i*delta
@@ -503,7 +538,7 @@ int DiffTool::CompareFileNames(const string &file1, const string &file2)
 			B[i][1] = min(ourMatchCost + B[i-1][0],
 				min(delta + B[i-1][1], delta + B[i][0]));
 		}
-		for (int i = 1; i <= (int)file1.size(); i++)
+		for (int i = 0; i <= (int)file1.size(); i++)
 			B[i][0] = B[i][1];
 	}
 

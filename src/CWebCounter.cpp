@@ -228,7 +228,6 @@ int CWebCounter::CountSLOC(filemap* fmap, results* result)
 	int script_language_of_cfm = VBS_CFM;
 	bool blank_line, found;
 	bool first_line_of_asp = true;
-	bool cs_inline = false;
 	size_t preLang = INVALID_POSITION;	// used for writing to files
 	string language, tempstr;
 	WebType webType;
@@ -309,12 +308,15 @@ int CWebCounter::CountSLOC(filemap* fmap, results* result)
 						filemap::iterator iter2 = Separation[current_language].first.end();
 						while (CUtil::CheckBlank(tempstr))
 						{
+							if (iter2 == Separation[current_language].first.begin())
+								break;
 							iter2--;
 							tempstr = CUtil::TrimString(iter2->line);
 							if (iter2 == Separation[current_language].first.begin())
 								break;
 						}
-						if (!CUtil::CheckBlank(tempstr)) {
+						if (!CUtil::CheckBlank(tempstr))
+						{
 							c = tempstr[tempstr.length() - 1];
 							if (c != ';' && c != '{' && c != '}' && c != ':')
 								iter->line += ";";

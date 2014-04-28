@@ -176,7 +176,7 @@ int CCssCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 			// LSLOC call for the current line, which is not blank and does not contain non-css keywords
 			LSLOC(result, line, strLSLOC, prev_char, phys_exec_lines, phys_data_lines);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(iter->line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -241,7 +241,7 @@ void CCssCounter::LSLOC(results* result, string &line, string &strLSLOC,
 		default:	
 			// by default for other characters than '{' or ';' or '}' this case is executed
 			// append character to strLSLOC
-			strSize = CUtil::TruncateLine(1, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(1, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strLSLOC += tmp[index];
 			break;

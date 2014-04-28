@@ -19,7 +19,7 @@
 #include <algorithm>
 using namespace std;
 
-#define PRODUCT_REVISION "2011.10"
+#define PRODUCT_REVISION "2013.04B"
 
 #define PHY		0
 #define LOG		1
@@ -28,58 +28,70 @@ using namespace std;
 
 #define MAX_LINE_LENGTH		  10485760
 
-#define UNKNOWN				  0		// Unknown file type
-#define DATAFILE			  1		// Data file type
-#define WEB					  2		// WebCounter
-#define	ADA					  3		// ADA
-#define BASH				  4		// Bash
-#define CSH					  5		// C-Shell
-#define C_CPP				  6		// C/C++
-#define CSHARP				  7		// C#
-#define CSHARP_HTML			  8		// C# in HTML
-#define CSHARP_XML			  9		// C# in XML
-#define CSHARP_ASP_S		  10	// C# server side in ASP
-#define COLDFUSION			  11	// ColdFusion
-#define CFSCRIPT			  12	// ColdFusion CFScript
-#define	CSS				      13	// CSS
-#define	FORTRAN				  14	// Fortran
-#define	HTML				  15	// HTML
-#define	HTML_PHP			  16	// HTML in PHP
-#define	HTML_JSP			  17	// HTML in JSP
-#define	HTML_ASP			  18	// HTML in ASP
-#define	HTML_CFM			  19    // HTML in ColdFusion
-#define JAVA				  20	// Java
-#define JAVA_JSP			  21	// Java	in JSP
-#define	JAVASCRIPT			  22	// JavaScript
-#define	JAVASCRIPT_HTML		  23	// JavaScript in HTML
-#define	JAVASCRIPT_XML		  24	// JavaScript in XML
-#define	JAVASCRIPT_PHP		  25	// JavaScript in PHP
-#define	JAVASCRIPT_JSP		  26	// JavaScript in JSP
-#define	JAVASCRIPT_ASP_S	  27	// JavaScript server side in ASP
-#define	JAVASCRIPT_ASP_C	  28	// JavaScript client side in ASP
-#define	JAVASCRIPT_CFM		  29    // Javascript in ColdFusion
-#define	NEXTMIDAS			  30	// NeXtMidas
-#define	XMIDAS				  31	// X-Midas
-#define PASCAL				  32	// Pascal
-#define	PERL				  33	// Perl
-#define	PHP					  34	// PHP
-#define	PYTHON				  35	// Python
-#define RUBY				  36	// Ruby
-#define	SQL					  37	// SQL
-#define	SQL_CFM				  38	// SQL in ColdFusion
-#define VB					  39	// Visual Basic
-#define VBSCRIPT			  40	// VBScript
-#define VBS_HTML			  41	// VBScript in HTML
-#define VBS_XML				  42	// VBScript in XML
-#define VBS_PHP				  43	// VBScript in PHP
-#define VBS_JSP				  44	// VBScript in JSP
-#define VBS_ASP_S			  45	// VBScript server side in ASP
-#define VBS_ASP_C			  46	// VBScript client side in ASP
-#define VBS_CFM				  47    // VBScript in ColdFusion
-#define XML					  48	// XML
+/*!
+* \enum ClassType
+*
+* Enumeration of file class types (languages).
+*/
+enum ClassType {
+	UNKNOWN,				// Unknown file type
+	DATAFILE,				// Data file type
+	WEB,					// WebCounter
+	ADA,					// ADA
+	BASH,					// Bash
+	CSH,					// C-Shell
+	C_CPP,					// C/C++
+	CSHARP,					// C#
+	CSHARP_HTML,			// C# in HTML
+	CSHARP_XML,				// C# in XML
+	CSHARP_ASP_S,			// C# server side in ASP
+	COLDFUSION,				// ColdFusion
+	CFSCRIPT,				// ColdFusion CFScript
+	CSS,					// CSS
+	FORTRAN,				// Fortran
+	HTML,					// HTML
+	HTML_PHP,				// HTML in PHP
+	HTML_JSP,				// HTML in JSP
+	HTML_ASP,				// HTML in ASP
+	HTML_CFM,				// HTML in ColdFusion
+	JAVA,					// Java
+	JAVA_JSP,				// Java	in JSP
+	JAVASCRIPT,				// JavaScript
+	JAVASCRIPT_HTML,		// JavaScript in HTML
+	JAVASCRIPT_XML,			// JavaScript in XML
+	JAVASCRIPT_PHP,			// JavaScript in PHP
+	JAVASCRIPT_JSP,			// JavaScript in JSP
+	JAVASCRIPT_ASP_S,		// JavaScript server side in ASP
+	JAVASCRIPT_ASP_C,		// JavaScript client side in ASP
+	JAVASCRIPT_CFM,			// Javascript in ColdFusion
+	MAKEFILE,				// Makefiles
+	MATLAB,					// MATLAB
+	NEXTMIDAS,				// NeXtMidas
+	XMIDAS,					// X-Midas
+	PASCAL,					// Pascal
+	PERL,					// Perl
+	PHP,					// PHP
+	PYTHON,					// Python
+	RUBY,					// Ruby
+	SQL,					// SQL
+	SQL_CFM,				// SQL in ColdFusion
+	VB,						// Visual Basic
+	VBSCRIPT,				// VBScript
+	VBS_HTML,				// VBScript in HTML
+	VBS_XML,				// VBScript in XML
+	VBS_PHP,				// VBScript in PHP
+	VBS_JSP,				// VBScript in JSP
+	VBS_ASP_S,				// VBScript server side in ASP
+	VBS_ASP_C,				// VBScript client side in ASP
+	VBS_CFM,				// VBScript in ColdFusion
+	VERILOG,				// Verilog
+	VHDL,					// VHDL
+	XML						// XML
+};
 
 #define EMBEDDED_FILE_PREFIX  "*.*" // the text prepended to the temp file created for embedded code
 #define DEF_LANG_NAME		  "UNDEF"
+#define DEFAULT_TRUNCATE	  10000
 
 #define INPUT_FILE_LIST_OLD   "filelist.dat"
 #define INPUT_FILE_LIST_NAME  "fileList.txt"
@@ -89,21 +101,30 @@ using namespace std;
 #define OUTPUT_FILE_CPLX_CSV  "outfile_cplx.csv"
 #define OUTPUT_FILE_SUM	      "outfile_summary.txt"
 #define OUTPUT_FILE_SUM_CSV   "outfile_summary.csv"
+#define OUTPUT_FILE_CYC_CPLX  "outfile_cyclomatic_cplx.txt"
+#define OUTPUT_FILE_CYC_CPLX_CSV  "outfile_cyclomatic_cplx.csv"
 #define LOG_FILENAME		  "log.txt"
 
 ///////////////////////////////////////////////////////
 // For WebCounter Only
 ///////////////////////////////////////////////////////
 
-#define	WEB_PHP_START		0
-#define	WEB_PHP_END			1
-#define	WEB_SCRIPT_START	2
-#define	WEB_SCRIPT_END		3
-#define	WEB_ASP_JSP_START	4
-#define	WEB_ASP_JSP_END		5
-#define	WEB_PHP_START2		6
-#define	WEB_CFM_START		7
-#define	WEB_CFM_END			8
+/*!
+* \enum WebTag
+*
+* Enumeration of web script tags.
+*/
+enum WebTag {
+	WEB_PHP_START,
+	WEB_PHP_START2,
+	WEB_PHP_END,
+	WEB_SCRIPT_START,
+	WEB_SCRIPT_END,
+	WEB_ASP_JSP_START,
+	WEB_ASP_JSP_END,
+	WEB_CFM_START,
+	WEB_CFM_END
+};
 
 ///////////////////////////////////////////////////////
 // General Data Structures
@@ -188,11 +209,11 @@ typedef vector<UIntPair> UIntPairVector;
 class results
 {
 public:
-	results() { reset(); }
-	results& operator= (const results&);
-	void reset();
-	void clearSLOC();
-	bool addSLOC(const string &line, bool &trunc_flag);
+	results() { reset(); }				//!< Constructor
+	results& operator= (const results&);//!< Assignment operator
+	void reset();						//!< Method that zeroes out all counters
+	void clearSLOC();					//!< Method that frees memory used to store logical SLOC
+	bool addSLOC(const string &line, bool &trunc_flag);	//!< Method to store a logical source line of code
 
 	string error_code;					//!< Error string
 	unsigned int blank_lines;			//!< # of blank lines
@@ -213,11 +234,10 @@ public:
 	unsigned int cmplx_assign_lines;	//!< # of assignments
 	unsigned int cmplx_pointer_lines;	//!< # of pointers
 	unsigned int trunc_lines;			//!< # of truncated logical lines
-	bool   e_flag;						//!< Set to true if error occurs during processing
-	string file_name;					//!< File name
-	int    file_type;					//!< File type (DATA, CODE)
-	unsigned int class_type;			//!< File class type
-	size_t lsloc_truncate;				//!< # of characters allowed in LSLOC for differencing (0=no truncation)
+	bool      e_flag;					//!< Set to true if error occurs during processing
+	string    file_name;				//!< File name
+	int       file_type;				//!< File type (DATA, CODE)
+	ClassType class_type;				//!< File class type
 
 	UIntVector directive_count;			//!< Count of each directive statement keyword
 	UIntVector data_name_count;			//!< Count of each data statement keyword
@@ -233,6 +253,7 @@ public:
 	UIntVector cmplx_assign_count;		//!< Count of assignments
 	UIntVector cmplx_pointer_count;		//!< Count of pointers
 	UIntVector cmplx_nestloop_count;	//!< Count of nested loop levels
+	filemap cmplx_cycfunct_count;		//!< Cyclomatic complexity by function
 
 	// differencing
 	bool firstDuplicate;				//!< Is this file the first (source) duplicate? (printed in main counting file)

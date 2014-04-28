@@ -123,7 +123,7 @@ int CMidasCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* f
 		tmp    = CUtil::TrimString(iter->line);
 		tmpBak = CUtil::TrimString(itfmBak->line);
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + tmp, directive, cnt, 1, exclude, "", "", &result->directive_count, false);
@@ -145,7 +145,7 @@ int CMidasCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* f
 				// strip off trailing (&)
 				if (tmpBak[tmpBak.length()-1] == '&')
 					tmpBak = tmpBak.substr(0, tmpBak.length() - 1);
-				strSize = CUtil::TruncateLine(tmpBak.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(tmpBak.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = tmpBak.substr(0, strSize);
 				result->directive_lines[PHY]++;
@@ -157,7 +157,7 @@ int CMidasCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* f
 			// strip off trailing (&)
 			if (tmpBak[tmpBak.length()-1] == '&')
 				tmpBak = tmpBak.substr(0, tmpBak.length() - 1);
-			strSize = CUtil::TruncateLine(tmpBak.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(tmpBak.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strDirLine += tmpBak.substr(0, strSize);
 			result->directive_lines[PHY]++;
@@ -224,7 +224,7 @@ int CMidasCounter::LanguageSpecificProcess(filemap* fmap, results* result, filem
 			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak,
 				data_continue, temp_lines, phys_exec_lines, phys_data_lines, loopEnd);
 		
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count, false);
@@ -273,7 +273,7 @@ void CMidasCounter::LSLOC(results* result, string line, string lineBak, string &
 	string tmpBak = CUtil::TrimString(lineBak);
 
 	// record nested loops
-	if (isPrintKeyword)
+	if (print_cmplx)
 	{
 		bool new_loop = false;
 		if (CUtil::FindKeyword(tmp, "do", 0, TO_END_OF_STRING, false) == 0)
@@ -305,7 +305,7 @@ void CMidasCounter::LSLOC(results* result, string line, string lineBak, string &
 		}
 		if (new_loop)
 		{
-			if ((int)result->cmplx_nestloop_count.size() < loopEnd.size())
+			if (result->cmplx_nestloop_count.size() < loopEnd.size())
 				result->cmplx_nestloop_count.push_back(1);
 			else
 				result->cmplx_nestloop_count[loopEnd.size()-1]++;
@@ -351,7 +351,7 @@ void CMidasCounter::LSLOC(results* result, string line, string lineBak, string &
 			if (start < tmp.length())
 			{
 				// save LSLOC for if statement, then process in-line action
-				strSize = CUtil::TruncateLine(start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += tmp.substr(0, strSize);
@@ -379,7 +379,7 @@ void CMidasCounter::LSLOC(results* result, string line, string lineBak, string &
 		if (tmp.length() > start)
 		{
 			// save LSLOC for if statement, then process loop action
-			strSize = CUtil::TruncateLine(start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += tmp.substr(0, strSize);
@@ -404,7 +404,7 @@ void CMidasCounter::LSLOC(results* result, string line, string lineBak, string &
 		{
 			tmp = tmp.substr(start, tmp.length() - 1);
 			tmpBak = tmpBak.substr(start, tmpBak.length() - 1);
-			strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += tmp.substr(0, strSize);
@@ -428,7 +428,7 @@ void CMidasCounter::LSLOC(results* result, string line, string lineBak, string &
 	else
 	{
 		// save LSLOC
-		strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+		strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 		if (strSize > 0)
 		{
 			strLSLOC += tmp.substr(0, strSize);

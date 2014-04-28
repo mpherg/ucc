@@ -175,6 +175,48 @@ CCsharpCounter::CCsharpCounter()
 	cmplx_preproc_list.push_back("region");
 	cmplx_preproc_list.push_back("undef");
 	cmplx_preproc_list.push_back("warning");
+
+	cmplx_cyclomatic_list.push_back("if");
+	cmplx_cyclomatic_list.push_back("case");
+	cmplx_cyclomatic_list.push_back("while");
+	cmplx_cyclomatic_list.push_back("for");
+	cmplx_cyclomatic_list.push_back("foreach");
+	cmplx_cyclomatic_list.push_back("catch");
+	cmplx_cyclomatic_list.push_back("?");
+}
+
+/*!
+* Perform preprocessing of file lines before counting.
+*
+* \param fmap list of file lines
+*
+* \return method status
+*/
+int CCsharpCounter::PreCountProcess(filemap* fmap)
+{
+	size_t i;
+	bool found;
+	filemap::iterator fit;
+	for (fit = fmap->begin(); fit != fmap->end(); fit++) 
+	{
+		if (fit->line.empty())
+			continue;
+		// check for parenthesis within attribute brackets [...()]
+		found = false;
+		for (i = 0; i < fit->line.length(); i++)
+		{
+			if (fit->line[i] == '[')
+				found = true;
+			else if (found)
+			{
+				if (fit->line[i] == ']')
+					found = false;
+				else if (fit->line[i] == '(' || fit->line[i] == ')')
+					fit->line[i] = '$';
+			}
+		}
+	}
+	return 0;
 }
 
 /*!

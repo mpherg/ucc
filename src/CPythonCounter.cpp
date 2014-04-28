@@ -437,7 +437,7 @@ int CPythonCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* 
 		if (CUtil::CheckBlank(iter->line))
 			continue;
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count);
@@ -456,7 +456,7 @@ int CPythonCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* 
         	}
 			if (contd)
 			{
-				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = itfmBak->line.substr(0, strSize);
 				result->directive_lines[PHY]++;
@@ -465,7 +465,7 @@ int CPythonCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* 
 		else
 		{
 			// continuation of a previous directive
-			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strDirLine += "\n" + itfmBak->line.substr(0, strSize);
 			result->directive_lines[PHY]++;
@@ -529,7 +529,7 @@ int CPythonCounter::LanguageSpecificProcess(filemap* fmap, results* result, file
 			// does the ReplaceQuote get the continuation character \ replaced?
 			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, paren_count, loopWhiteSpace);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -593,7 +593,7 @@ void CPythonCounter::LSLOC(results* result, string line, string lineBak, string 
 	// 5. physical count considers all lines executables (or directives, no declarations)
 
 	// check for loop ends, new loops, and record white space in order to determine ends
-	if (isPrintKeyword)
+	if (print_cmplx)
 	{
 		// check white space for loop ends
 		if (loopWhiteSpace.size() > 0)
@@ -601,7 +601,7 @@ void CPythonCounter::LSLOC(results* result, string line, string lineBak, string 
 			// get white space
 			tmp = line;
 			tmp = CUtil::TrimString(tmp, -1);
-			numWS = line.length() - tmp.length();
+			numWS = (unsigned)(line.length() - tmp.length());
 
 			// check for loop ends
 			for (n = (int)loopWhiteSpace.size() - 1; n >= 0; n--)
@@ -623,7 +623,7 @@ void CPythonCounter::LSLOC(results* result, string line, string lineBak, string 
 				// get white space
 				tmp = line;
 				tmp = CUtil::TrimString(tmp, -1);
-				numWS = line.length() - tmp.length();
+				numWS = (unsigned)(line.length() - tmp.length());
 			}
 
 			// add nested loop white space and record nested loop level
@@ -665,7 +665,7 @@ void CPythonCounter::LSLOC(results* result, string line, string lineBak, string 
 			if (tmp.rfind("else:") != tmp.length() - 5)
 			{
 				// 3.
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, i);
@@ -714,7 +714,7 @@ void CPythonCounter::LSLOC(results* result, string line, string lineBak, string 
 
 		if (!lineContinued)
 		{
-			strSize = CUtil::TruncateLine(line_length - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(line_length - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += line.substr(start, line_length);
@@ -730,7 +730,7 @@ void CPythonCounter::LSLOC(results* result, string line, string lineBak, string 
 		else
 		{
 			tmp = CUtil::TrimString(line.substr(start, line_length - start));
-			strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += tmp.substr(0, strSize);

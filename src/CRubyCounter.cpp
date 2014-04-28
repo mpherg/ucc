@@ -372,20 +372,13 @@ int CRubyCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 */
 int CRubyCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak)
 {
-	char			prev_char			= 0;
-	bool			data_continue		= false;
-	bool			inArrayDec			= false;
-	string			strLSLOC			= "";
-	string			strLSLOCBak			= "";
-	unsigned int	openBrackets		= 0;
+	string strLSLOC    = "";
+	string strLSLOCBak = "";
 
 	filemap::iterator fit, fitbak;
 	string line, lineBak;
 	StringVector loopLevel;
 
-	unsigned int phys_exec_lines = 0;
-	unsigned int phys_data_lines = 0;
-	unsigned int temp_lines = 0;
 	unsigned int cnt = 0;
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
 	delimiter = "";
@@ -401,7 +394,7 @@ int CRubyCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 		{
 			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(" " + line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -435,7 +428,6 @@ void CRubyCounter::LSLOC(results* result, string line, string lineBak, string &s
 	size_t i, j, strSize = string::npos;
 	size_t idx = string::npos;
 	bool trunc_flag = false;
-	unsigned int cnt = 0;
 
 	string tmp = CUtil::TrimString(strLSLOC);
 	string tline = CUtil::TrimString(line);
@@ -485,7 +477,7 @@ void CRubyCounter::LSLOC(results* result, string line, string lineBak, string &s
 		{
 			if (line[idx] == ';')
 			{
-				strSize = CUtil::TruncateLine(idx + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(idx + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 1 && CUtil::TrimString(line.substr(start, strSize - 1)) != ";")
 				{
 					// only include ';' if it stands alone
@@ -495,16 +487,16 @@ void CRubyCounter::LSLOC(results* result, string line, string lineBak, string &s
 			}
 			else if (line[idx] == ':')
 			{
-				strSize = CUtil::TruncateLine(idx + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(idx + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				idx++;
 			}
 			else if (line.length() >= idx + 4 && line.substr(idx, 4) == "then")
 			{
 				idx += 4;
-				strSize = CUtil::TruncateLine(idx - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(idx - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			}
 			else
-				strSize = CUtil::TruncateLine(idx - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(idx - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 		}
 
 		if (strSize > 0 && strSize != string::npos)	// only if (idx != 0 && idx != string::npos) returns true
@@ -514,7 +506,7 @@ void CRubyCounter::LSLOC(results* result, string line, string lineBak, string &s
 		}
 		else if (!line_skipped)
 		{
-			strSize = CUtil::TruncateLine(line.length() - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(line.length() - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += line.substr(start, strSize);

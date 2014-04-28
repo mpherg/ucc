@@ -1,6 +1,6 @@
                  UCC LICENSE
 
-           COPYRIGHT (C) 2006 - 2012                
+           COPYRIGHT (C) 2006 - 2013                
       Center for Systems and Software Engineering
         University of Southern California
        Salvatori 330, 941 West 37th Place
@@ -206,4 +206,3 @@ OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS), EVEN IF SUCH HO
 OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 END OF TERMS AND CONDITIONS
-

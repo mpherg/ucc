@@ -139,7 +139,7 @@ int CCshCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 	filemap::iterator fit, fitbak;
 	string line, lineBak;
 
-	bool found_for = false, data_continue = false;
+	bool data_continue = false;
 	string strLSLOC = "";
 	string strLSLOCBak = "";
 	string str;
@@ -159,10 +159,10 @@ int CCshCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 		if (!CUtil::CheckBlank(line))
 		{
 			// process logical SLOC
-			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, found_for,
-				data_continue, temp_lines, phys_exec_lines, phys_data_lines, loopLevel);
+			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, data_continue,
+				temp_lines, phys_exec_lines, phys_data_lines, loopLevel);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -191,7 +191,6 @@ int CCshCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 * \param lineBak original physical line of code
 * \param strLSLOC processed logical string
 * \param strLSLOCBak original logical string
-* \param found_for found for flag
 * \param data_continue continuation of a data declaration line
 * \param temp_lines tracks physical line count
 * \param phys_exec_lines number of physical executable lines
@@ -199,11 +198,11 @@ int CCshCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 * \param loopLevel nested loop level
 */
 void CCshCounter::LSLOC(results* result, string line, string lineBak, string &strLSLOC, string &strLSLOCBak,
-						bool &found_for, bool &data_continue, unsigned int &temp_lines, unsigned int &phys_exec_lines,
+						bool &data_continue, unsigned int &temp_lines, unsigned int &phys_exec_lines,
 						unsigned int &phys_data_lines, unsigned int &loopLevel)
 {
 	size_t start, end;
-	size_t i = 0, j, m, strSize;
+	size_t i, j, m, strSize;
 	bool trunc_flag = false, found;
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
 	string str, spc;
@@ -212,7 +211,6 @@ void CCshCounter::LSLOC(results* result, string line, string lineBak, string &st
 	string tmp    = CUtil::TrimString(line);
 	string tmpBak = CUtil::TrimString(lineBak);
 	start = 0;
-	end = tmp.length();
 
 	// there may be more than 1 logical SLOC in this line
 	while (start < tmp.length())
@@ -253,7 +251,7 @@ void CCshCounter::LSLOC(results* result, string line, string lineBak, string &st
 		}
 
 		// process nested loops
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			str = CUtil::TrimString(tmp.substr(start, end - start + 1));
 			if (CUtil::FindKeyword(str, "foreach") != string::npos
@@ -345,7 +343,7 @@ void CCshCounter::LSLOC(results* result, string line, string lineBak, string &st
 				}
 
 				// save LSLOC for if statement, then process in-line action
-				strSize = CUtil::TruncateLine(j - start + 1, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(j - start + 1, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += tmp.substr(start, strSize);
@@ -365,7 +363,7 @@ void CCshCounter::LSLOC(results* result, string line, string lineBak, string &st
 		if (tmp[end] == '\\')
 		{
 			// strip off trailing (\)
-			strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				spc = "";
@@ -402,9 +400,9 @@ void CCshCounter::LSLOC(results* result, string line, string lineBak, string &st
 		{
 			// save LSLOC
 			if (tmp[end] == ';')
-				strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			else
-				strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += CUtil::TrimString(tmp.substr(start, strSize));

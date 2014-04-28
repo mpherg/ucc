@@ -22,6 +22,7 @@ public:
 	CCsharpCounter();
 
 protected:
+	virtual int PreCountProcess(filemap* fmap);
 	virtual int ReplaceQuote(string &strline, size_t &idx_start, bool &contd, char &CurrentQuoteEnd);
 
 private:

@@ -22,6 +22,8 @@
 #include "CHtmlCounter.h"
 #include "CJavaCounter.h"
 #include "CJavascriptCounter.h"
+#include "CMakefileCounter.h"
+#include "CMatlabCounter.h"
 #include "CNeXtMidasCounter.h"
 #include "CPascalCounter.h"
 #include "CPerlCounter.h"
@@ -31,6 +33,8 @@
 #include "CSqlCounter.h"
 #include "CVbCounter.h"
 #include "CVbscriptCounter.h"
+#include "CVerilogCounter.h"
+#include "CVHDLCounter.h"
 #include "CWebCounter.h"
 #include "CXMidasCounter.h"
 #include "CXmlCounter.h"
@@ -53,7 +57,7 @@ public:
 	~MainObject();
 
 	int MainProcess(int argc, char *argv[]);
-	string GetLanguageName(unsigned int class_type, const string &file_name = "");
+	string GetLanguageName(ClassType class_type, const string &file_name = "");
 	void ShowProgress(unsigned int disp, unsigned int count_progress, unsigned int sizeo);
 	static void ShowUsage(const string &option = "", bool do_exit = true);
 
@@ -200,24 +204,26 @@ protected:
 	*/
 	typedef map<WebType, WebTotalValue> WebTotalValueMap;
 
+	void SetCounterOptions();
 	void ResetCounterCounts();
 	void UpdateCounterCounts(bool useListA = true);
 	int ParseCommandLine(int argc, char *argv[]);
 	int ReadAllFiles(StringVector &inputFileVector, const string &inputFileList = INPUT_FILE_LIST_NAME, bool useListA = true);
 	void ProcessSourceList(bool useListA = true);
-	unsigned int DecideLanguage(const string &file_name, bool setCounter = true);
+	ClassType DecideLanguage(const string &file_name, bool setCounter = true);
 	bool IsSupportedFileExtension(const string &file_name);
 	int PrintCountResults(bool useListA = true, const string &outputFileNamePrePend = "",
 		StringVector* filesToPrint = NULL, bool excludeFiles = true);
 	ofstream* GetOutputSummaryStream(const string &outputFileNamePrePend = "", bool csvOutput = false);
 	void CloseOutputSummaryStream();
 	int PrintCountSummary(TotalValueMap &total, WebTotalValueMap &webtotal,
-		bool useListA = true, const string &outputFileNamePrePend = "");
+		const string &outputFileNamePrePend = "");
 	ofstream* GetTotalOutputStream(const string &outputFileNamePrePend = "", bool csvOutput = false);
 	void CloseTotalOutputStream();
 	int PrintTotalCountResults(bool useListA = true, const string &outputFileNamePrePend = "",
 		StringVector* filesToPrint = NULL, bool excludeFiles = true);
 	int PrintComplexityResults(bool useListA = true, const string &outputFileNamePrePend = "", bool printDuplicates = false);
+	int PrintCyclomaticComplexity(bool useListA = true, const string &outputFileNamePrePend = "", bool printDuplicates = false);
 	void PrintDuplicateSummary(bool useListA = true, const string &outputFileNamePrePend = "");
 	void PrintDuplicateList(StringVector& myList1, StringVector& myList2, ofstream& outfile, bool csvFormat = false);
 	void FindDuplicateFiles(SourceFileList &fileList, StringVector &dupList1, StringVector &dupList2, bool checkMatch = false);

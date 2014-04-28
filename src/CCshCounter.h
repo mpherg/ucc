@@ -26,7 +26,7 @@ protected:
 	virtual int PreCountProcess(filemap* fmap);
 	virtual int LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak = NULL);
 	void LSLOC(results* result, string line, string lineBak, string &strLSLOC, string &strLSLOCBak,
-		bool &found_for, bool &data_continue, unsigned int &temp_lines, unsigned int &phys_exec_lines,
+		bool &data_continue, unsigned int &temp_lines, unsigned int &phys_exec_lines,
 		unsigned int &phys_data_lines, unsigned int &loopLevel);
 
 	StringVector continue_keywords;		//!< List of keywords to continue to next line

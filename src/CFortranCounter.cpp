@@ -260,7 +260,6 @@ int CFortranCounter::CountCommentsSLOC(filemap* fmap, results* result, filemap *
 	size_t i, idx_start, comment_start;
 	size_t quote_idx_start;
 	string curBlckCmtStart, curBlckCmtEnd, prevLine;
-	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
 	char CurrentQuoteEnd = 0;
 	bool quote_contd = false, found, foundSpc;
 	filemap::iterator itfmBak = fmapBak->begin();
@@ -449,7 +448,7 @@ int CFortranCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap*
 		if (CUtil::CheckBlank(iter->line))
 			continue;
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count, false);
@@ -468,7 +467,7 @@ int CFortranCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap*
         	}
 			if (contd)
 			{
-				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = CUtil::TrimString(itfmBak->line.substr(0, strSize));
 				if (strDirLine[strDirLine.length() - 1] == '&')
@@ -479,7 +478,7 @@ int CFortranCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap*
 		else
 		{
 			// continuation of a previous directive
-			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				str = CUtil::TrimString(itfmBak->line.substr(0, strSize));
@@ -571,7 +570,7 @@ int CFortranCounter::LanguageSpecificProcess(filemap* fmap, results* result, fil
 			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, fixed_continue,
 				data_continue, temp_lines, phys_exec_lines, phys_data_lines, loopEnd);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count, false);
@@ -612,7 +611,7 @@ void CFortranCounter::LSLOC(results* result, string line, string lineBak, string
 							unsigned int &phys_data_lines, StringVector &loopEnd)
 {
 	size_t start, end;
-	size_t i = 0, j, k, m, strSize;
+	size_t i, j, k, m, strSize;
 	bool found_exclusion = false, trunc_flag = false, found;
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
 	string str, spc;
@@ -622,7 +621,6 @@ void CFortranCounter::LSLOC(results* result, string line, string lineBak, string
 	string tmp    = CUtil::TrimString(line);
 	string tmpBak = CUtil::TrimString(lineBak);
 	start = 0;
-	end = tmp.length();
 
 	// if continuation, prepend previous line for correct processing
 	if (strLSLOC.length() > 0)
@@ -669,7 +667,7 @@ void CFortranCounter::LSLOC(results* result, string line, string lineBak, string
 		}
 
 		// record nested loops
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			bool new_loop = false;
 			i = CUtil::FindKeyword(tmp, "end do", start, end, false);
@@ -759,7 +757,7 @@ void CFortranCounter::LSLOC(results* result, string line, string lineBak, string
 			}
 			if (new_loop)
 			{
-				if ((int)result->cmplx_nestloop_count.size() < loopEnd.size())
+				if (result->cmplx_nestloop_count.size() < loopEnd.size())
 					result->cmplx_nestloop_count.push_back(1);
 				else
 					result->cmplx_nestloop_count[loopEnd.size()-1]++;
@@ -843,7 +841,7 @@ void CFortranCounter::LSLOC(results* result, string line, string lineBak, string
 						if (!CUtil::CheckBlank(str) && str != ";" && str != "&" && !fixed_continue)
 						{
 							// save LSLOC for if statement, then process in-line action
-							strSize = CUtil::TruncateLine(j - start + 1, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+							strSize = CUtil::TruncateLine(j - start + 1, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 							if (strSize > 0)
 							{
 								strLSLOC += CUtil::TrimString(tmp.substr(start, strSize));
@@ -865,9 +863,9 @@ void CFortranCounter::LSLOC(results* result, string line, string lineBak, string
 		{
 			// strip off trailing (&)
 			if (tmp[end] == '&')
-				strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			else
-				strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				spc = "";
@@ -904,9 +902,9 @@ void CFortranCounter::LSLOC(results* result, string line, string lineBak, string
 		{
 			// save LSLOC
 			if (tmp[end] == ';')
-				strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			else
-				strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += CUtil::TrimString(tmp.substr(start, strSize));

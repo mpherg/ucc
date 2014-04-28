@@ -73,6 +73,14 @@ private:
 	*/
 	typedef pair<SourceFileElement *, SourceFileElement *> MatchedFilePair;
 
+	//! Pair of file name to source file element
+	/*!
+	* \typedef FileNamePair
+	*
+	* Defines a pair for file name and source file element.  Used for matching files
+	*/
+	typedef pair<string, SourceFileElement *> FileNamePair;
+
 	//! Vector of matching file pairs and results.
 	/*!
 	* \typedef MatchingType
@@ -130,6 +138,14 @@ private:
 	* Defines a map of file element pairs.
 	*/
 	typedef map<SourceFileElement *, SourceFileElement *> BaselineFileMapType;
+
+	//! Multimap of file elements, sorted by file name
+	/*!
+	* \typedef SortedPreferenceMapType
+	*
+	* Defines a multimap of file elements and names
+	*/
+	typedef multimap<string, SourceFileElement*> SortedPreferenceMapType;
 
 	MatchingType matchedFilesList;		//!< List of matching file pairs and differencing results
 

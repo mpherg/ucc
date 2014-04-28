@@ -166,7 +166,7 @@ int CBashCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 	filemap::iterator fit, fitbak;
 	string line, lineBak;
 
-	bool found_for = false, data_continue = false;
+	bool data_continue = false;
 	string strLSLOC = "";
 	string strLSLOCBak = "";
 	string str;
@@ -186,10 +186,10 @@ int CBashCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 		if (!CUtil::CheckBlank(line))
 		{
 			// process logical SLOC
-			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, found_for,
-				data_continue, temp_lines, phys_exec_lines, phys_data_lines, loopLevel);
+			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, data_continue,
+				temp_lines, phys_exec_lines, phys_data_lines, loopLevel);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -218,7 +218,6 @@ int CBashCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 * \param lineBak original physical line of code
 * \param strLSLOC processed logical string
 * \param strLSLOCBak original logical string
-* \param found_for found for flag
 * \param data_continue continuation of a data declaration line
 * \param temp_lines tracks physical line count
 * \param phys_exec_lines number of physical executable lines
@@ -226,7 +225,7 @@ int CBashCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 * \param loopLevel nested loop level
 */
 void CBashCounter::LSLOC(results* result, string line, string lineBak, string &strLSLOC, string &strLSLOCBak,
-						 bool &found_for, bool &data_continue, unsigned int &temp_lines, unsigned int &phys_exec_lines,
+						 bool &data_continue, unsigned int &temp_lines, unsigned int &phys_exec_lines,
 						 unsigned int &phys_data_lines, StringVector &loopLevel)
 {
 	size_t start, end;
@@ -239,7 +238,6 @@ void CBashCounter::LSLOC(results* result, string line, string lineBak, string &s
 	string tmp    = CUtil::TrimString(line);
 	string tmpBak = CUtil::TrimString(lineBak);
 	start = 0;
-	end = tmp.length();
 
 	// skip whole line '{' or '}'
 	if (tmp == "{" || tmp == "}")
@@ -310,7 +308,7 @@ void CBashCounter::LSLOC(results* result, string line, string lineBak, string &s
 			end = tmp.length() - 1;
 
 		// process nested loops
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			str = CUtil::TrimString(tmp.substr(start, end - start + 1));
 			if (CUtil::FindKeyword(str, "for") != string::npos
@@ -392,7 +390,7 @@ void CBashCounter::LSLOC(results* result, string line, string lineBak, string &s
 		if (tmp[end] == '\\')
 		{
 			// strip off trailing (\)
-			strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				spc = "";
@@ -432,12 +430,12 @@ void CBashCounter::LSLOC(results* result, string line, string lineBak, string &s
 			{
 				// don't trim if ';;'
 				if (tmp.length() > 1 && tmp[end - 1] == ';')
-					strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				else
-					strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(end - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			}
 			else
-				strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(end - start + 1, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += CUtil::TrimString(tmp.substr(start, strSize));

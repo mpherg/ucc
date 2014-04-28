@@ -218,6 +218,21 @@ CVbCounter::CVbCounter()
 	cmplx_preproc_list.push_back("#Region");
 
 	cmplx_assign_list.push_back("=");
+
+	cmplx_cyclomatic_list.push_back("If");
+	cmplx_cyclomatic_list.push_back("ElseIf");
+	cmplx_cyclomatic_list.push_back("IIf");
+	cmplx_cyclomatic_list.push_back("For");
+	cmplx_cyclomatic_list.push_back("While");
+	cmplx_cyclomatic_list.push_back("Until");
+	cmplx_cyclomatic_list.push_back("Catch");
+	cmplx_cyclomatic_list.push_back("When");
+	cmplx_cyclomatic_list.push_back("Case");
+
+	ignore_cmplx_cyclomatic_list.push_back("Select Case");
+	ignore_cmplx_cyclomatic_list.push_back("Case Else");
+	ignore_cmplx_cyclomatic_list.push_back("End If");
+	ignore_cmplx_cyclomatic_list.push_back("End While");
 }
 
 /*!
@@ -242,7 +257,7 @@ int CVbCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmap
 		if (CUtil::CheckBlank(iter->line))
 			continue;
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count);
@@ -262,7 +277,7 @@ int CVbCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmap
 			if (contd)
 			{
 				result->directive_lines[PHY]++;
-				strSize = CUtil::TruncateLine(iter->line.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(iter->line.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = iter->line.substr(0, strSize);
 			}
@@ -270,7 +285,7 @@ int CVbCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmap
 		else
 		{
 			// continuation of a previous directive
-			strSize = CUtil::TruncateLine(iter->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(iter->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strDirLine += "\n" + iter->line.substr(0, strSize);
 			result->directive_lines[PHY]++;
@@ -359,7 +374,7 @@ int CVbCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap*
 		}
 
 		// record nested loops
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			new_loop = false;
 			if (CUtil::FindKeyword(tmpstr, "Do") == 0)
@@ -429,7 +444,7 @@ int CVbCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap*
 				if (line_skipped)
 					continue;
 
-				strSize = CUtil::TruncateLine(i + 1 - prev_pos, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - prev_pos, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(prev_pos, strSize);
@@ -460,7 +475,7 @@ int CVbCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap*
 					}
 					else
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 						{
 							cnt = 0;
 							CUtil::CountTally(strLSLOC, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -489,4 +504,77 @@ int CVbCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap*
 			result->exec_lines[PHY]++;
 	}
 	return 1;
+}
+
+/*!
+ * Parses lines for function/method names.
+ *
+ * \param line line to be processed
+ * \param lastline last line processed
+ * \param functionStack stack of functions
+ * \param functionName function name found
+ *
+ * \return 1 if function name is found
+ */
+int CVbCounter::ParseFunctionName(const string &line, string &lastline, StringVector &functionStack, string &functionName)
+{
+	string str;
+	size_t idx;
+
+	idx = CUtil::FindKeyword(line, "Sub");
+	if (idx != string::npos)
+	{
+		if (idx + 4 < line.length())
+		{
+			str = line.substr(idx + 4);
+			functionStack.push_back(str);
+		}
+	}
+	else
+	{
+		idx = CUtil::FindKeyword(line, "Function");
+		if (idx != string::npos)
+		{
+			if (idx + 9 < line.length())
+			{
+				str = line.substr(idx + 9);
+				functionStack.push_back(str);
+			}
+		}
+	}
+
+	if (functionStack.empty())
+	{
+		// dealing with some code out of any subroutines, it a "main" code
+		return 2;
+	}
+
+	idx = CUtil::FindKeyword(line, "End Sub");
+	if (idx != string::npos)
+	{
+		str = functionStack.back();
+		functionStack.pop_back();
+		idx = str.find("(");
+		if (idx != string::npos)
+		{
+			functionName = CUtil::ClearRedundantSpaces(str.substr(0, idx));
+			return 1;
+		}
+	}
+	else
+	{
+		idx = CUtil::FindKeyword(line, "End Function");
+		if (idx != string::npos)
+		{
+			str = functionStack.back();
+			functionStack.pop_back();
+			idx = str.find("(");
+			if (idx != string::npos)
+			{
+				functionName = CUtil::ClearRedundantSpaces(str.substr(0, idx));
+				return 1;
+			}
+		}
+	}
+	return 0;
 }

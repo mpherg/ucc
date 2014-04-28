@@ -124,6 +124,17 @@ CPerlCounter::CPerlCounter()
 	cmplx_preproc_list.push_back("use");
 
 	cmplx_assign_list.push_back("=");
+
+	cmplx_cyclomatic_list.push_back("if");
+	cmplx_cyclomatic_list.push_back("elsif");
+	cmplx_cyclomatic_list.push_back("case");
+	cmplx_cyclomatic_list.push_back("while");
+	cmplx_cyclomatic_list.push_back("until");
+	cmplx_cyclomatic_list.push_back("for");
+	cmplx_cyclomatic_list.push_back("foreach");
+	cmplx_cyclomatic_list.push_back("catch");
+	cmplx_cyclomatic_list.push_back("unless");
+	cmplx_cyclomatic_list.push_back("?");
 }
 
 /*!
@@ -135,15 +146,27 @@ CPerlCounter::CPerlCounter()
 */
 int CPerlCounter::PreCountProcess(filemap* fmap)
 {
-	size_t i;
+	size_t i, j;
 	filemap::iterator fit;
 	for (fit = fmap->begin(); fit != fmap->end(); fit++) 
 	{
 		if (fit->line.empty())
 			continue;
-		// check for $#, $', $", $`
+		// check for $#, $', $", $`, {$...}
 		for (i = fit->line.length() - 1; i > 0; i--)
 		{
+			if (fit->line[i-1] == '{' && fit->line[i] == '$')
+			{
+				fit->line[i-1] = '$';
+				for (j = i+1; j < fit->line.length(); j++)
+				{
+					if (fit->line[j] == '}')
+					{
+						fit->line[j] = '$';
+						break;
+					}
+				}
+			}
 			if (fit->line[i-1] == '$' &&
 				(fit->line[i] == '#' || fit->line[i] == '\'' || fit->line[i] == '"' || fit->line[i] == '`'))
 				fit->line[i] = '$';
@@ -256,7 +279,7 @@ int CPerlCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fm
 		if (CUtil::CheckBlank(iter->line))
 			continue;
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count);
@@ -276,7 +299,7 @@ int CPerlCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fm
 			}
 			if (contd)
 			{
-				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = itfmBak->line.substr(0, strSize);
 				result->directive_lines[PHY]++;
@@ -285,7 +308,7 @@ int CPerlCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fm
 		else
 		{
 			// continuation of a previous directive
-			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strDirLine += "\n" + itfmBak->line.substr(0, strSize);
 			result->directive_lines[PHY]++;
@@ -359,7 +382,6 @@ int CPerlCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 				{
 					line.replace(0, p + 2, " ");
 					lineBak.replace(0, p + 2, " ");
-					comment = false;
 				}
 				else
 					continue;
@@ -367,10 +389,7 @@ int CPerlCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 
 			comPos = line.find("#");
 			if (comPos == string::npos)
-			{
 				comment = false;
-				comPos = string::npos;
-			}
 			else
 			{
 				comment = true;
@@ -391,7 +410,7 @@ int CPerlCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, l_paren_cnt, l_forflag, found_forifwhile,
 				found_while, prev_char, data_continue, temp_lines, phys_exec_lines, phys_data_lines, openBrackets, loopLevel);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -441,6 +460,8 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 	bool do_boolean, trunc_flag = false;
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
 	unsigned int cnt = 0;
+	unsigned int loopCnt = 0;
+	StringVector::iterator lit;
 	string tmp = CUtil::TrimString(strLSLOC);
 	string tmp2;
 
@@ -464,7 +485,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 			}
 
 			// record open bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				if (line[i] == '{')
 				{
@@ -511,7 +532,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 				}
 				if (do_boolean)
 				{
-					if (isPrintKeyword)
+					if (print_cmplx)
 					{
 						if (loopLevel.size() > 0) loopLevel.pop_back();
 						loopLevel.push_back("do");
@@ -571,7 +592,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 			{
 				// capture statement before modifier
 				tmp2 = CUtil::TrimString(strLSLOCBak + lineBak.substr(start, i - start));
-				strSize = CUtil::TruncateLine(pos, 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(pos, 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC = tmp.substr(0, strSize);
@@ -582,7 +603,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 				strLSLOC = "";
 				strLSLOCBak = "";
 
-				strSize = CUtil::TruncateLine(tmp.length() - pos, 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(tmp.length() - pos, 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC = tmp.substr(pos, strSize);
@@ -594,7 +615,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 			}
 			else
 			{
-				strSize = CUtil::TruncateLine(i - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -644,7 +665,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 				start = i + 1; 
 
 			// record close bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				if (openBrackets > 0)
 					openBrackets--;
@@ -666,22 +687,22 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 					forflag = true;
 					paren_cnt++;
 
-					if (isPrintKeyword && (int)loopLevel.size() > openBrackets && openBrackets > 0)
+					if (print_cmplx && (loopLevel.size() > openBrackets) && (openBrackets > 0))
 						loopLevel.pop_back();
 
 					if (CUtil::FindKeyword(tmp, "while")!= string::npos)
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 							loopLevel.push_back("while");
 						found_while = true;
 					}
 					else if (CUtil::FindKeyword(tmp, "until")!= string::npos)
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 							loopLevel.push_back("until");
 						found_while = true;
 					}
-					else if (isPrintKeyword)
+					else if (print_cmplx)
 					{
 						if (CUtil::FindKeyword(tmp, "for") != string::npos)
 							loopLevel.push_back("for");
@@ -692,8 +713,8 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 						if (CUtil::FindKeyword(tmp, "if") == string::npos && CUtil::FindKeyword(tmp, "elsif") == string::npos &&
 							CUtil::FindKeyword(tmp, "unless") == string::npos)
 						{
-							unsigned int loopCnt = 0;
-							for (StringVector::iterator lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
+							loopCnt = 0;
+							for (lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
 							{
 								if ((*lit) != "")
 									loopCnt++;
@@ -746,7 +767,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 					{
 						// capture statement before modifier
 						tmp2 = CUtil::TrimString(strLSLOCBak + lineBak.substr(start, i + 1 - start));
-						strSize = CUtil::TruncateLine(pos, 0, result->lsloc_truncate, trunc_flag);
+						strSize = CUtil::TruncateLine(pos, 0, this->lsloc_truncate, trunc_flag);
 						if (strSize > 0)
 						{
 							strLSLOC = tmp.substr(0, strSize);
@@ -757,7 +778,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 						strLSLOC = "";
 						strLSLOCBak = "";
 
-						strSize = CUtil::TruncateLine(tmp.length() - pos, 0, result->lsloc_truncate, trunc_flag);
+						strSize = CUtil::TruncateLine(tmp.length() - pos, 0, this->lsloc_truncate, trunc_flag);
 						if (strSize > 0)
 						{
 							strLSLOC = tmp.substr(pos, strSize);
@@ -774,7 +795,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 					}
 					else
 					{
-						strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+						strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 						if (strSize > 0)
 						{
 							strLSLOC += line.substr(start, strSize);
@@ -808,7 +829,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 
 			if (CUtil::FindKeyword(line, "or", i, i + 2, true) == i)
 			{
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -828,7 +849,7 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 	}
 
 	tmp2 = CUtil::TrimString(line.substr(start, i - start));
-	strSize = CUtil::TruncateLine(tmp2.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+	strSize = CUtil::TruncateLine(tmp2.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 	if (strSize > 0)
 	{
 		strLSLOC += tmp2.substr(0, strSize);
@@ -848,4 +869,106 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 		temp_lines++;
 	if (temp_lines == 0 && phys_data_lines == 0 && phys_exec_lines == 0)
 		phys_exec_lines = 1;
+}
+
+/*!
+ * Parses lines for function/method names.
+ *
+ * \param line line to be processed
+ * \param lastline last line processed
+ * \param functionStack stack of functions
+ * \param functionName function name found
+ *
+ * \return 1 if function name is found
+ */
+int CPerlCounter::ParseFunctionName(const string &line, string &lastline, StringVector &functionStack, string &functionName)
+{
+
+	string tline, str;
+	size_t i, idx, tidx, cnt;
+
+	tline = CUtil::TrimString(line);
+	idx = tline.find('{');
+	if (idx != string::npos)
+	{
+		// check whether it is at first index, if yes then function name is at above line
+		if (idx == 0)
+		{
+			functionStack.push_back(lastline);
+			lastline.erase();
+		}
+		else
+		{
+			str = tline.substr(0, idx);
+			if (str.find('(') != string::npos && str[0] != '(')
+				lastline = str;
+			else
+				lastline += " " + str;
+			functionStack.push_back(CUtil::TrimString(lastline));
+			lastline.erase();
+		}
+	}
+	else if (tline.length() > 0 && tline[tline.length() - 1] != ';' &&
+		lastline.length() > 0 && lastline[lastline.length() - 1] != ';')
+	{
+		// append until all parenthesis are closed
+		tidx = lastline.find('(');
+		if (tidx != string::npos)
+		{
+			cnt = 1;
+			while (tidx != string::npos)
+			{
+				tidx = lastline.find('(', tidx + 1);
+				if (tidx != string::npos)
+					cnt++;
+			}
+			tidx = lastline.find(')');
+			while (tidx != string::npos)
+			{
+				cnt++;
+				tidx = lastline.find(')', tidx + 1);
+			}
+			if (cnt % 2 != 0)
+				lastline += " " + tline;
+			else
+				lastline = tline;
+		}
+		else
+			lastline = tline;
+	}
+	else
+		lastline = tline;
+
+	idx = line.find('}');
+	if (idx != string::npos && !functionStack.empty())
+	{
+		str = functionStack.back();
+		functionStack.pop_back();
+		idx = CUtil::FindKeyword(str, "sub");
+		if (idx != string::npos && idx + 4 < str.length())
+		{
+			functionName = CUtil::ClearRedundantSpaces(str.substr(idx + 4));
+			lastline.erase();
+			return 1;
+		}
+		lastline.erase();
+	}
+
+	// check stack for any "sub"
+	idx = string::npos;
+	if (!functionStack.empty())
+	{
+		for (i = 0; i < functionStack.size(); i++)
+		{
+			idx = CUtil::FindKeyword(functionStack[i], "sub");
+			if (idx != string::npos)
+				break;
+		}
+	}
+	if (idx == string::npos)
+	{
+		// dealing with some code out of any subroutines, it a "main" code
+		return 2;
+	}
+	return 0;
 }

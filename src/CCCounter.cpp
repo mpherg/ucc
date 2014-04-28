@@ -38,7 +38,7 @@ CCCounter::CCCounter()
 	directive.push_back("#pragma");
 	directive.push_back("#undef");
 	directive.push_back("#using");
-	
+
 	data_name_list.push_back("asm");
 	data_name_list.push_back("auto");
 	data_name_list.push_back("bool");
@@ -184,4 +184,15 @@ CCCounter::CCCounter()
 	cmplx_preproc_list.push_back("#using");
 
 	cmplx_pointer_list.push_back("->");
+
+	cmplx_cyclomatic_list.push_back("if");
+	cmplx_cyclomatic_list.push_back("case");
+	cmplx_cyclomatic_list.push_back("while");
+	cmplx_cyclomatic_list.push_back("for");
+	cmplx_cyclomatic_list.push_back("catch");
+	cmplx_cyclomatic_list.push_back("?");
+
+	skip_cmplx_cyclomatic_file_extension_list.push_back(".h");
+	skip_cmplx_cyclomatic_file_extension_list.push_back(".hh");
+	skip_cmplx_cyclomatic_file_extension_list.push_back(".hpp");
 }

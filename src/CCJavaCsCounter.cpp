@@ -78,7 +78,7 @@ int CCJavaCsCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap*
 		if (CUtil::CheckBlank(iter->line))
 			continue;
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count);
@@ -94,11 +94,11 @@ int CCJavaCsCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap*
 				{
 					contd = true;
 					break;
-   		        }
-        	}
+				}
+			}
 			if (contd)
 			{
-				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = itfmBak->line.substr(0, strSize);
 				result->directive_lines[PHY]++;
@@ -107,7 +107,7 @@ int CCJavaCsCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap*
 		else
 		{
 			// continuation of a previous directive
-			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strDirLine += "\n" + itfmBak->line.substr(0, strSize);
 			result->directive_lines[PHY]++;
@@ -186,7 +186,7 @@ int CCJavaCsCounter::LanguageSpecificProcess(filemap* fmap, results* result, fil
 				prev_char, data_continue, temp_lines, phys_exec_lines, phys_data_lines, inArrayDec, found_for,
 				openBrackets, loopLevel);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -266,7 +266,7 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 				break;
 
 			// record open bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				if (line[i] == '{')
 				{
@@ -321,7 +321,7 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 				}
 				if (found_do || found_try || found_else)
 				{
-					if (found_do && isPrintKeyword)
+					if (found_do && print_cmplx)
 					{
 						if (loopLevel.size() > 0) loopLevel.pop_back();
 						loopLevel.push_back("do");
@@ -361,7 +361,7 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 			}
 			else
 			{
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -419,32 +419,32 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 				tmp = CUtil::TrimString(line.substr(start, i));
 				if (CUtil::FindKeyword(tmp, "for") != string::npos
 					|| CUtil::FindKeyword(tmp, "foreach") != string::npos
-					|| CUtil::FindKeyword(tmp, "while")!= string::npos
+					|| CUtil::FindKeyword(tmp, "while") != string::npos
 					|| CUtil::FindKeyword(tmp, "if") != string::npos)
 				{
 					forflag = true;
 					paren_cnt++;
 
-					if (isPrintKeyword && (unsigned int)loopLevel.size() > openBrackets && openBrackets > 0)
+					if (print_cmplx && (unsigned int)loopLevel.size() > openBrackets && openBrackets > 0)
 						loopLevel.pop_back();
 
 					if (CUtil::FindKeyword(tmp, "for") != string::npos)
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 							loopLevel.push_back("for");
 						found_for = true;
 					}
-					else if (CUtil::FindKeyword(tmp, "while")!= string::npos)
+					else if (CUtil::FindKeyword(tmp, "while") != string::npos)
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 							loopLevel.push_back("while");
 						found_while = true;
 					}
-					else if (isPrintKeyword && CUtil::FindKeyword(tmp, "foreach") != string::npos)
+					else if (print_cmplx && CUtil::FindKeyword(tmp, "foreach") != string::npos)
 						loopLevel.push_back("foreach");
 
 					// record nested loop level
-					if (isPrintKeyword)
+					if (print_cmplx)
 					{
 						if (CUtil::FindKeyword(tmp, "if") == string::npos)
 						{
@@ -471,7 +471,7 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 				if (paren_cnt == 0)
 				{
 					// handle 'for', 'foreach', 'while', 'if'
-					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -496,7 +496,7 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 				if (!inArrayDec) start = i + 1;
 
 			// record close bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				if (openBrackets > 0)
 					openBrackets--;
@@ -521,7 +521,7 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 	}
 
 	tmp = CUtil::TrimString(line.substr(start, i - start));
-	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 	if (strSize > 0)
 	{
 		strLSLOC += tmp.substr(0, strSize);
@@ -546,4 +546,125 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 		temp_lines++;
 	if (temp_lines == 0 && phys_data_lines == 0 && phys_exec_lines == 0)
 		phys_exec_lines = 1;
+}
+
+/*!
+* Parses lines for function/method names.
+*
+* \param line line to be processed
+* \param lastline last line processed
+* \param functionStack stack of functions
+* \param functionName function name found
+*
+* \return 1 if function name is found
+*/
+int CCJavaCsCounter::ParseFunctionName(const string &line, string &lastline, StringVector &functionStack, string &functionName)
+{
+	string tline, str;
+	size_t idx, tidx, cnt, cnt2;
+	unsigned int cyclomatic_cnt = 0;
+	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
+
+	tline = CUtil::TrimString(line);
+	idx = tline.find('{');
+	if (idx != string::npos)
+	{
+		// check whether it is at first index, if yes then function name is at above line
+		if (idx == 0)
+		{
+			functionStack.push_back(lastline);
+			lastline.erase();
+		}
+		else
+		{
+			str = tline.substr(0, idx);
+			tidx = cnt = cnt2 = 0;
+			if (str[0] != '(' && str[0] != ':' && (lastline.length() < 1 || lastline[lastline.length() - 1] != ':'))
+			{
+				while (tidx != string::npos)
+				{
+					tidx = str.find('(', tidx);
+					if (tidx != string::npos)
+					{
+						cnt++;
+						tidx++;
+					}
+				}
+				if (cnt > 0)
+				{
+					tidx = 0;
+					while (tidx != string::npos)
+					{
+						tidx = str.find(')', tidx);
+						if (tidx != string::npos)
+						{
+							cnt2++;
+							tidx++;
+						}
+					}
+				}
+			}
+			// make sure parentheses are closed and no parent class listed
+			if ((cnt > 0 && cnt == cnt2) || (lastline.length() > 0 && lastline[lastline.length() - 1] == ';'))
+				lastline = str;
+			else
+				lastline += " " + str;
+			functionStack.push_back(CUtil::TrimString(lastline));
+			lastline.erase();
+		}
+	}
+	else if (tline.length() > 0 && tline[tline.length() - 1] != ';' &&
+		lastline.length() > 0 && lastline[lastline.length() - 1] != ';')
+	{
+		// append until all parentheses are closed
+		tidx = lastline.find('(');
+		if (tidx != string::npos)
+		{
+			cnt = 1;
+			while (tidx != string::npos)
+			{
+				tidx = lastline.find('(', tidx + 1);
+				if (tidx != string::npos)
+					cnt++;
+			}
+			tidx = lastline.find(')');
+			while (tidx != string::npos)
+			{
+				cnt++;
+				tidx = lastline.find(')', tidx + 1);
+			}
+			if (cnt % 2 != 0)
+				lastline += " " + tline;
+			else
+				lastline = tline;
+		}
+		else
+			lastline = tline;
+	}
+	else
+		lastline = tline;
+
+	idx = line.find('}');
+	if (idx != string::npos && !functionStack.empty())
+	{
+		str = functionStack.back();
+		functionStack.pop_back();
+		idx = str.find('(');
+
+		if (idx != string::npos)
+		{
+			// search for cyclomatic complexity keywords and other possible keywords
+			CUtil::CountTally(str, cmplx_cyclomatic_list, cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
+			if (cyclomatic_cnt <= 0 && CUtil::FindKeyword(str, "switch") == string::npos &&
+				CUtil::FindKeyword(str, "try") == string::npos && CUtil::FindKeyword(str, "finally") == string::npos &&
+				CUtil::FindKeyword(str, "return") == string::npos && str.find('=') == string::npos)
+			{
+				functionName = CUtil::ClearRedundantSpaces(str.substr(0, idx));
+				lastline.erase();
+				return 1;
+			}
+		}
+		lastline.erase();
+	}
+	return 0;
 }

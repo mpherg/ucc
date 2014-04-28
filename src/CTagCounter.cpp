@@ -85,7 +85,7 @@ int CTagCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, prev_char,
 				data_continue, temp_lines, phys_exec_lines, phys_data_lines);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CountTagTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count, false);
@@ -105,7 +105,7 @@ int CTagCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 	if (strLSLOC.length() > 0)
 	{
 		bool trunc_flag = false;
-		if (strLSLOCBak.length() == result->lsloc_truncate)
+		if (strLSLOCBak.length() == this->lsloc_truncate)
 			trunc_flag = true;
 		ok = result->addSLOC(strLSLOCBak, trunc_flag);
 
@@ -176,7 +176,7 @@ void CTagCounter::LSLOC(results* result, string line, string lineBak, string &st
 				continue;
 			}
 
-			strSize = CUtil::TruncateLine(i - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(i - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				if (strLSLOC.length() > 0 && strLSLOC[strLSLOC.length()-1] != '>' && line[0] != '<')
@@ -235,7 +235,7 @@ void CTagCounter::LSLOC(results* result, string line, string lineBak, string &st
 	}
 
 	tmp = CUtil::TrimString(line.substr(start, i - start));
-	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 	if (strSize > 0)
 	{
 		if (strLSLOC.length() > 0 && strLSLOC[strLSLOC.length()-1] != '>' && line[0] != '<')

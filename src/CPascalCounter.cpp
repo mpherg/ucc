@@ -305,7 +305,7 @@ int CPascalCounter::CountCommentsSLOC(filemap* fmap, results* result, filemap *f
 						{
 							if (isDirective)
 							{
-								strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+								strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 								if (strSize > 0)
 								{
 									if (contd)
@@ -324,7 +324,7 @@ int CPascalCounter::CountCommentsSLOC(filemap* fmap, results* result, filemap *f
 						{
 							if (isDirective)
 							{
-								strSize = CUtil::TruncateLine(itfmBak->line.length() - idx_start, 0, result->lsloc_truncate, trunc_flag);
+								strSize = CUtil::TruncateLine(itfmBak->line.length() - idx_start, 0, this->lsloc_truncate, trunc_flag);
 								if (strSize > 0)
 									strDirLine = itfmBak->line.substr(idx_start, strSize);
 								result->directive_lines[PHY]++;
@@ -350,7 +350,7 @@ int CPascalCounter::CountCommentsSLOC(filemap* fmap, results* result, filemap *f
 					{
 						if (isDirective)
 						{
-							strSize = CUtil::TruncateLine(idx_end - idx_start + curBlckCmtEnd.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+							strSize = CUtil::TruncateLine(idx_end - idx_start + curBlckCmtEnd.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 							if (strSize > 0)
 							{
 								if (contd)
@@ -452,7 +452,7 @@ int CPascalCounter::LanguageSpecificProcess(filemap* fmap, results* result, file
 			else
 				result->exec_lines[PHY] += 1;
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count, false);
@@ -484,11 +484,12 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 						   bool &found_forifwhile, bool &found_end, bool &found_loop, StringVector &loopLevel)
 {
 	size_t start = 0; // starting index of the working string
-	size_t i = 0, tempi, strSize;
+	size_t i, tempi, strSize;
 	string templine = CUtil::TrimString(line);
 	string tmp;
 	bool trunc_flag = false;
-	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$:";
+	unsigned int loopCnt;
+	StringVector::iterator lit;
 	string keywordchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
 
 	// there may be more than 1 logical SLOC in a line
@@ -499,7 +500,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 		{
 			if (!found_end)
 			{
-				strSize = CUtil::TruncateLine(i - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -510,15 +511,15 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 					found_block, found_forifwhile, found_end, trunc_flag);
 
 				// record end loop for nested loop processing
-				if (isPrintKeyword)
+				if (print_cmplx)
 				{
 					if (found_loop)
 					{
 						found_loop = false;
 						loopLevel.push_back("do");
 
-						unsigned int loopCnt = 0;
-						for (StringVector::iterator lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
+						loopCnt = 0;
+						for (lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
 						{
 							if ((*lit) != "")
 								loopCnt++;
@@ -568,7 +569,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 			found_loop = false;
 
 			// capture SLOC
-			strSize = CUtil::TruncateLine(i - 2 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(i - 2 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += line.substr(start, strSize);
@@ -581,7 +582,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 			if (line.length() > i + 1 && line[i + 1] == '.')
 			{
 				// record end loop for nested loop processing
-				if (isPrintKeyword)
+				if (print_cmplx)
 				{
 					while (loopLevel.size() > 0)
 						loopLevel.pop_back();
@@ -592,7 +593,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 			else
 			{
 				// record end loop for nested loop processing
-				if (isPrintKeyword)
+				if (print_cmplx)
 				{
 					if (loopLevel.size() > 0)
 						loopLevel.pop_back();
@@ -624,7 +625,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 					if (CUtil::FindKeyword(tmp, "do", 0, TO_END_OF_STRING, false) != string::npos)
 					{
 						// found a SLOC
-						strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+						strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 						if (strSize > 0)
 						{
 							strLSLOC += line.substr(start, strSize);
@@ -639,12 +640,12 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 					else
 					{
 						// record nested loop level
-						if (isPrintKeyword)
+						if (print_cmplx)
 						{
 							loopLevel.push_back("repeat");
 
-							unsigned int loopCnt = 0;
-							for (StringVector::iterator lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
+							loopCnt = 0;
+							for (lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
 							{
 								if ((*lit) != "")
 									loopCnt++;
@@ -662,7 +663,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 				CUtil::FindKeyword(tmp, "then", 0, TO_END_OF_STRING, false) != string::npos)
 			{
 				// found a SLOC
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -681,7 +682,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 			// process else since no ';' is allowed before else
 			if (CUtil::FindKeyword(tmp, "else", 0, TO_END_OF_STRING, false) != string::npos)
 			{
-				strSize = CUtil::TruncateLine(i - 4 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i - 4 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -697,7 +698,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 			// process until since ';' is optional before else
 			if (CUtil::FindKeyword(tmp, "until", 0, TO_END_OF_STRING, false) != string::npos)
 			{
-				strSize = CUtil::TruncateLine(i - 5 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i - 5 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -719,15 +720,15 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 					found_block = true;
 
 					// record nested loop level
-					if (isPrintKeyword)
+					if (print_cmplx)
 					{
 						if (found_loop)
 						{
 							found_loop = false;
 							loopLevel.push_back("do");
 
-							unsigned int loopCnt = 0;
-							for (StringVector::iterator lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
+							loopCnt = 0;
+							for (lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
 							{
 								if ((*lit) != "")
 									loopCnt++;
@@ -748,7 +749,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 				tempi = CUtil::FindKeyword(templine, "of", 0, TO_END_OF_STRING, false);
 				if (tempi == templine.length() - 2)
 				{
-					strSize = CUtil::TruncateLine(line.length() - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(line.length() - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -766,7 +767,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 			if (CUtil::FindKeyword(tmp, "= array", 0, TO_END_OF_STRING, false) != string::npos ||
 				CUtil::FindKeyword(tmp, "= record", 0, TO_END_OF_STRING, false) != string::npos)
 			{
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -776,7 +777,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 					found_block, found_forifwhile, found_end, trunc_flag);
 				start = i + 1;
 
-				if (isPrintKeyword)
+				if (print_cmplx)
 					loopLevel.push_back("");
 
 				continue;
@@ -785,7 +786,7 @@ void CPascalCounter::LSLOC(results* result, string line, string lineBak, string 
 	}
 
 	tmp = CUtil::TrimString(line.substr(start, i - start));
-	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 	if (strSize > 0)
 	{
 		strLSLOC += tmp.substr(0, strSize);

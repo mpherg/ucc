@@ -202,7 +202,7 @@ int CAdaCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fma
 		if (CUtil::CheckBlank(iter->line))
 			continue;
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count, false);
@@ -223,7 +223,7 @@ int CAdaCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fma
         	}
 			if (contd)
 			{
-				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = itfmBak->line.substr(0, strSize);
 				result->directive_lines[PHY]++;
@@ -232,7 +232,7 @@ int CAdaCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fma
 		else
 		{
 			// continuation of a previous directive
-			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strDirLine += "\n" + itfmBak->line.substr(0, strSize);
 			result->directive_lines[PHY]++;
@@ -273,7 +273,6 @@ int CAdaCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fma
 */
 int CAdaCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak)
 {
-	bool			blank_flag		= false;
 	bool			found_accept	= false;
 	string			strLSLOC		= "";
 	string			strLSLOCBak		= "";
@@ -282,7 +281,6 @@ int CAdaCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 
 	filemap::iterator fit, fitbak;
 	string line, lineBak, tmp;
-	string special = "[]()+/-*<>=,@&~!^?:%{}";
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$:";
 
 	unsigned int l_paren_cnt = 0;
@@ -295,16 +293,7 @@ int CAdaCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 		line = ' ' + fit->line;
 		lineBak = ' ' + fitbak->line;
 
-		if (CUtil::CheckBlank(line))
-		{
-			// the line is either blank/whole line comment/compiler directive
-			blank_flag = true;
-			continue;
-		}
-		else
-			blank_flag = false;
-
-		if (!blank_flag)
+		if (!CUtil::CheckBlank(line))
 		{
 			// blank line means blank_line/comment_line/directive
 			// call SLOC function to detect logical SLOC and add to result
@@ -320,7 +309,7 @@ int CAdaCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 			else
 				result->exec_lines[PHY]++;
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count, false);
@@ -404,7 +393,6 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 	string templine = CUtil::TrimString(line);
 	string tmp;
 	bool trunc_flag = false;
-	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$:";
 	string keywordchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
 
 	// there may be more than 1 logical SLOC in a line
@@ -425,7 +413,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 				}
 				else
 				{
-					strSize = CUtil::TruncateLine(i - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(i - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -471,7 +459,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 			found_end = true;
 
 			// record end loop for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				tmp = CUtil::TrimString(line.substr(start, i + 5 - start));
 				if (CUtil::FindKeyword(tmp, "end loop", 0, TO_END_OF_STRING, false) != string::npos)
@@ -483,23 +471,6 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 
 		if (!found_end)
 		{
-			// 'begin' is ignored because it's counted with procedure, function, etc. already
-			// this may ignore the 'standalone' block that starts with 'declare' or only 'begin'
-//			if (CUtil::FindKeyword(tmp, "begin", 0, TO_END_OF_STRING, false) != string::npos)
-//			{
-//				if (!found_is) // ignore '... is begin'
-//				{
-//					// found a SLOC
-//					strLSLOC += line.substr(start, i - start + 1);
-//					strLSLOCBak += lineBak.substr(start, i - start + 1);
-//					FoundSLOC(result, strLSLOC, strLSLOCBak, found_block, found_forifwhile, 
-//						found_end, found_type, found_is, found_accept); 
-//					start = i + 1;
-//					continue;
-//				}
-//				else
-//					found_is = false;
-//			}
 			if (!found_forifwhile)
 			{
 				if (CUtil::FindKeyword(tmp, "for", 0 , TO_END_OF_STRING, false) != string::npos ||
@@ -514,7 +485,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 				if (CUtil::FindKeyword(tmp, "loop", 0, TO_END_OF_STRING, false) != string::npos)
 				{
 					// found a SLOC
-					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -526,7 +497,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 					start = i + 1;
 
 					// record nested loop level
-					if (isPrintKeyword)
+					if (print_cmplx)
 					{
 						loopLevel++;
 						if ((unsigned int)result->cmplx_nestloop_count.size() < loopLevel)
@@ -542,7 +513,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 				CUtil::FindKeyword(tmp, "record", 0, TO_END_OF_STRING, false) != string::npos) // for..use..record
 			{
 				// found a SLOC
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -553,7 +524,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 				start = i + 1;
 
 				// record nested loop level
-				if (isPrintKeyword)
+				if (print_cmplx)
 				{
 					if (CUtil::FindKeyword(tmp, "loop", 0, TO_END_OF_STRING, false) != string::npos)
 					{
@@ -592,7 +563,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 				tempi = CUtil::FindKeyword(templine, "is", 0, TO_END_OF_STRING, false);
 				if (tempi == templine.length() - 2)
 				{
-					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -620,7 +591,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 					// NOTE: this implementation may not be complete
 					if (templine.at(templine.length() - 1) != ';')
 					{
-						strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+						strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 						if (strSize > 0)
 						{
 							strLSLOC += line.substr(start, strSize);
@@ -642,7 +613,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 			if (CUtil::FindKeyword(tmp, "select", 0, TO_END_OF_STRING, false) != string::npos)
 			{
 				// found 'select' statement, one SLOC
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -664,7 +635,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 				if (CUtil::FindKeyword(tmp, "do", 0, TO_END_OF_STRING, false) != string::npos)
 				{
 					// found a SLOC
-					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -679,7 +650,7 @@ void CAdaCounter::LSLOC(results* result, string line, string lineBak, string &st
 	}
 
 	tmp = CUtil::TrimString(line.substr(start, i - start));
-	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 	if (strSize > 0)
 	{
 		strLSLOC += tmp.substr(0, strSize);

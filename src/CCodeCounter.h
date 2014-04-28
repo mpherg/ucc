@@ -24,7 +24,7 @@ public:
 	virtual ~CCodeCounter();
 	virtual void InitializeCounts();
 	virtual int CountSLOC(filemap* fmap, results* result);
-	bool IsSupportedFileExtension(string);
+	bool IsSupportedFileExtension(const string &file_name);
 	virtual ofstream* GetOutputStream(const string &outputFileNamePrePend = "",
 		const string &cmd = "", bool csvOutput = false, bool legacyOutput = false);
 	virtual void CloseOutputStream();
@@ -43,6 +43,9 @@ public:
 	StringVector  cmplx_preproc_list;		//!< Preprocessor directives (complexity)
 	StringVector  cmplx_assign_list;		//!< Assignments (complexity)
 	StringVector  cmplx_pointer_list;		//!< Pointers (complexity)
+	StringVector  cmplx_cyclomatic_list;	//!< Cyclomatic complexity decision keywords (complexity)
+	StringVector  ignore_cmplx_cyclomatic_list;	//!< Cyclomatic complexity decision keywords to ignore (for example End If)
+	StringVector  skip_cmplx_cyclomatic_file_extension_list;	//!< Cyclomatic complexity file extensions to skip
 
 	UIntPairVector directive_count;			//!< Count of each directive statement keyword
 	UIntPairVector data_name_count;			//!< Count of each data statement keyword
@@ -58,9 +61,10 @@ public:
 	UIntPairVector cmplx_assign_count;		//!< Count of assignments
 	UIntPairVector cmplx_pointer_count;		//!< Count of pointers
 
-	bool          isPrintKeyword;			//!< Print keywords to output?
+	bool          print_cmplx;				//!< Print complexity and keyword counts
+	size_t        lsloc_truncate;			//!< # of characters allowed in LSLOC for differencing (0=no truncation)
 	string        language_name;			//!< Counter language name
-	int			  classtype;				//!< Language class type
+	ClassType	  classtype;				//!< Language class type
 	unsigned int  counted_files;			//!< Number of files counted
 	unsigned int  counted_dupFiles;			//!< Number of duplicate files counted
 	unsigned int  total_filesA;				//!< Total number of files in baseline A
@@ -80,6 +84,7 @@ protected:
 	virtual int CountComplexity(filemap* fmap, results* result);
 	virtual int CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmapBak = NULL) { return 0; }
 	virtual int LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak = NULL);
+	virtual int ParseFunctionName(const string &line, string &lastline, StringVector &functionStack, string &functionName);
 
 	StringVector  exclude_keywords;			//!< List of keywords to exclude from counts
 

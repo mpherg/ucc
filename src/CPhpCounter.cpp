@@ -204,7 +204,7 @@ int CPhpCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fma
 		if (CUtil::CheckBlank(iter->line))
 			continue;
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count);
@@ -223,7 +223,7 @@ int CPhpCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fma
 			}
 			if (contd)
 			{
-				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = itfmBak->line.substr(0, strSize);
 				result->directive_lines[PHY]++;
@@ -232,7 +232,7 @@ int CPhpCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fma
 		else
 		{
 			// continuation of a previous directive
-			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strDirLine += "\n" + itfmBak->line.substr(0, strSize);
 			result->directive_lines[PHY]++;
@@ -307,7 +307,7 @@ int CPhpCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 			LSLOC(result, line, lineBak, strLSLOC, strLSLOCBak, paren_count, for_flag, found_forifwhile, found_while,
 				prev_char, data_continue, temp_lines, phys_exec_lines, phys_data_lines, inArrayDec, found_for, loopLevel);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -385,7 +385,7 @@ void CPhpCounter::LSLOC(results* result, string line, string lineBak, string &st
 
 			// record open bracket for nested loop processing
 			// check for excluded loop keywords for alternate control syntax
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exclude_loop, cnt, 1, exclude, "", "");
@@ -482,7 +482,7 @@ void CPhpCounter::LSLOC(results* result, string line, string lineBak, string &st
 				}
 				if (found_do || found_try || found_else)
 				{
-					if (found_do && isPrintKeyword)
+					if (found_do && print_cmplx)
 					{
 						if (loopLevel.size() > 0)
 							loopLevel.pop_back();
@@ -523,7 +523,7 @@ void CPhpCounter::LSLOC(results* result, string line, string lineBak, string &st
 			}
 			else
 			{
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -602,24 +602,24 @@ void CPhpCounter::LSLOC(results* result, string line, string lineBak, string &st
 
 					if (CUtil::FindKeyword(tmp, "for") != string::npos)
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 							loopLevel.push_back("for");
 						found_for = true;
 					}
 					else if (CUtil::FindKeyword(tmp, "while")!= string::npos)
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 							loopLevel.push_back("while");
 						found_while = true;
 					}
 					else if (CUtil::FindKeyword(tmp, "foreach") != string::npos)
 						loopLevel.push_back("foreach");
 
-					else if (isPrintKeyword && CUtil::FindKeyword(tmp, "foreach") != string::npos)
+					else if (print_cmplx && CUtil::FindKeyword(tmp, "foreach") != string::npos)
 						loopLevel.push_back("foreach");
 					
 					// record nested loop level
-					if (isPrintKeyword)
+					if (print_cmplx)
 					{	
 						if (CUtil::FindKeyword(tmp, "if") == string::npos &&
 							CUtil::FindKeyword(tmp, "elseif") == string::npos &&
@@ -648,7 +648,7 @@ void CPhpCounter::LSLOC(results* result, string line, string lineBak, string &st
 				if (paren_cnt == 0)
 				{
 					// handle 'for', 'foreach', 'while', 'if', 'elseif', 'switch'
-					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -676,7 +676,7 @@ void CPhpCounter::LSLOC(results* result, string line, string lineBak, string &st
 			}
 
 			// record close bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				if ((unsigned int)loopLevel.size() > 0)
 					loopLevel.pop_back();
@@ -706,7 +706,7 @@ void CPhpCounter::LSLOC(results* result, string line, string lineBak, string &st
 	}
 
 	tmp = CUtil::TrimString(line.substr(start, i - start));
-	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 	if (strSize > 0)
 	{
 		strLSLOC += tmp.substr(0, strSize);

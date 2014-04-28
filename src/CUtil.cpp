@@ -236,7 +236,6 @@ size_t CUtil::FindKeyword(const string &str, const string &keyword, size_t start
 		else
 		{
 			// cannot find the keyword in str
-			idx = string::npos;
 			break;
 		}
 		i = idx + 1;	// keyword found but not stands alone nor surrounded by special chars
@@ -460,7 +459,7 @@ bool CUtil::GetFileList(StringVector &fileList, const string &path, bool symLink
 	closedir(dir);
 #else
 	struct _finddata_t c_file;
-	long hFile;
+	ptrdiff_t hFile;
 	string findPath = path + "\\*.*";
 
 	// the first file is obtained
@@ -502,8 +501,8 @@ bool CUtil::MatchFilename(const string &filename, const string &matchstr)
 {
 	int i, j, k, f, m, fl, ml, s, e, sl, lim;
 
-	fl = filename.length();
-	ml = matchstr.length();
+	fl = (int)filename.length();
+	ml = (int)matchstr.length();
 	if (ml == 0)
 		return(fl == 0);
 	if (fl == 0)
@@ -696,7 +695,7 @@ int CUtil::PrintFileHeader(ofstream &pout, const string &title, const string &cm
 	myOutput = "USC Unified CodeCount (UCC)";
 	PrintFileHeaderLine(pout, myOutput);
 
-	myOutput = "(c) Copyright 1998 - 2012 University of Southern California";
+	myOutput = "(c) Copyright 1998 - 2013 University of Southern California";
 	PrintFileHeaderLine(pout, myOutput);
 	pout << endl;
 
@@ -874,7 +873,10 @@ string CUtil::ClearRedundantSpaces(const string &str)
 				continue;
 			}
 		}
-		str_new[idx_new++] = str[idx];		
+		if (str[idx] == '\t')
+			str_new[idx_new++] = ' ';
+		else
+			str_new[idx_new++] = str[idx];
 	}
 	str_new.resize(idx_new);
 

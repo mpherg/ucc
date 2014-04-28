@@ -231,8 +231,7 @@ void CmpMngr::FindUnmodifiedLines(srcLineVector* aHm, srcLineVector* bHm)
 bool CmpMngr::SimilarLine(const string &baseLine, const string &compareLine)
 {
 	int m, n, i, j, k;
-	m = n = i = j = k = 0;
-	double LCSlen = 0;
+	double LCSlen;
 	m = (int)baseLine.size();
 	n = (int)compareLine.size();
 	vector<int> x1, x2;

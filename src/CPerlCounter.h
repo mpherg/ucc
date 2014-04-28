@@ -30,6 +30,7 @@ protected:
 		bool &forflag, bool &found_forifwhile, bool &found_while, char &prev_char, bool &data_continue,
 		unsigned int &temp_lines, unsigned int &phys_exec_lines, unsigned int &phys_data_lines,
 		unsigned int &openBrackets, StringVector &loopLevel);
+	int ParseFunctionName(const string &line, string &lastline, StringVector &functionStack, string &functionName);
 };
 
 #endif

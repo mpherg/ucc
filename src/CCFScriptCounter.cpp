@@ -179,7 +179,7 @@ int CCFScriptCounter::LanguageSpecificProcess(filemap* fmap, results* result, fi
 				prev_char, data_continue, temp_lines, phys_exec_lines, phys_data_lines, inArrayDec,
 				openBrackets, loopLevel);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count, false);
@@ -256,7 +256,7 @@ void CCFScriptCounter::LSLOC(results* result, string line, string lineBak, strin
 				break;
 
 			// record open bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				if (line[i] == '{')
 				{
@@ -306,7 +306,7 @@ void CCFScriptCounter::LSLOC(results* result, string line, string lineBak, strin
 				}
 				if (found_do || found_try || found_else)
 				{
-					if (found_do && isPrintKeyword)
+					if (found_do && print_cmplx)
 					{
 						if (loopLevel.size() > 0) loopLevel.pop_back();
 						loopLevel.push_back("do");
@@ -345,7 +345,7 @@ void CCFScriptCounter::LSLOC(results* result, string line, string lineBak, strin
 			}
 			else
 			{
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -401,22 +401,22 @@ void CCFScriptCounter::LSLOC(results* result, string line, string lineBak, strin
 					forflag = true;
 					paren_cnt++;
 
-					if (isPrintKeyword && (unsigned int)loopLevel.size() > openBrackets && openBrackets > 0)
+					if (print_cmplx && (unsigned int)loopLevel.size() > openBrackets && openBrackets > 0)
 						loopLevel.pop_back();
 
 					if (CUtil::FindKeyword(tmp, "while", 0, TO_END_OF_STRING, false)!= string::npos)
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 							loopLevel.push_back("while");
 						found_while = true;
 					}
-					else if (isPrintKeyword && CUtil::FindKeyword(tmp, "for", 0, TO_END_OF_STRING, false) != string::npos)
+					else if (print_cmplx && CUtil::FindKeyword(tmp, "for", 0, TO_END_OF_STRING, false) != string::npos)
 					{
 						loopLevel.push_back("for");
 					}
 
 					// record nested loop level
-					if (isPrintKeyword)
+					if (print_cmplx)
 					{
 						if (CUtil::FindKeyword(tmp, "if", 0, TO_END_OF_STRING, false) == string::npos)
 						{
@@ -443,7 +443,7 @@ void CCFScriptCounter::LSLOC(results* result, string line, string lineBak, strin
 				if (paren_cnt == 0) 
 				{
 					// handle 'for', 'foreach', 'while', 'if'
-					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -467,7 +467,7 @@ void CCFScriptCounter::LSLOC(results* result, string line, string lineBak, strin
 				if (!inArrayDec) start = i + 1;
 
 			// record close bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				// record close bracket for nested loop processing
 				if (openBrackets > 0)
@@ -495,7 +495,7 @@ void CCFScriptCounter::LSLOC(results* result, string line, string lineBak, strin
 	}
 
 	tmp = CUtil::TrimString(line.substr(start, i - start));
-	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 	if (strSize > 0)
 	{
 		strLSLOC += tmp.substr(0, strSize);

@@ -264,7 +264,7 @@ int CJavascriptCounter::CountDirectiveSLOC(filemap* fmap, results* result, filem
 		if (CUtil::CheckBlank(iter->line))
 			continue;
 
-		if (isPrintKeyword)
+		if (print_cmplx)
 		{
 			cnt = 0;
 			CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count);
@@ -284,7 +284,7 @@ int CJavascriptCounter::CountDirectiveSLOC(filemap* fmap, results* result, filem
 			}
 			if (contd)
 			{
-				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 					strDirLine = itfmBak->line.substr(0, strSize);
 				result->directive_lines[PHY]++;
@@ -293,7 +293,7 @@ int CJavascriptCounter::CountDirectiveSLOC(filemap* fmap, results* result, filem
 		else
 		{
 			// continuation of a previous directive
-			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(itfmBak->line.length(), strDirLine.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 				strDirLine += "\n" + itfmBak->line.substr(0, strSize);
 			result->directive_lines[PHY]++;
@@ -371,7 +371,7 @@ int CJavascriptCounter::LanguageSpecificProcess(filemap* fmap, results* result, 
 				prev_char, data_continue, temp_lines, phys_exec_lines, phys_data_lines, inArrayDec,
 				openBrackets, loopLevel);
 
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				cnt = 0;
 				CUtil::CountTally(line, exec_name_list, cnt, 1, exclude, "", "", &result->exec_name_count);
@@ -423,6 +423,8 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 	bool found_do, found_try, found_else, trunc_flag = false;
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$:";
 	unsigned int cnt = 0;
+	unsigned int loopCnt = 0;
+	StringVector::iterator lit;
 
 	string tmp = CUtil::TrimString(strLSLOC);
 
@@ -449,7 +451,7 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 				break;			
 			
 			// record open bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				if (line[i] == '{')
 				{
@@ -504,7 +506,7 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 				}
 				if (found_do || found_try || found_else)
 				{
-					if (found_do && isPrintKeyword)
+					if (found_do && print_cmplx)
 					{
 						if (loopLevel.size() > 0)
 							loopLevel.pop_back();
@@ -545,7 +547,7 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 			}
 			else
 			{
-				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 				if (strSize > 0)
 				{
 					strLSLOC += line.substr(start, strSize);
@@ -602,16 +604,16 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 					forflag = true;
 					paren_cnt++;
 
-					if (isPrintKeyword && (unsigned int)loopLevel.size() > openBrackets && openBrackets > 0)
+					if (print_cmplx && (unsigned int)loopLevel.size() > openBrackets && openBrackets > 0)
 						loopLevel.pop_back();
 
 					if (CUtil::FindKeyword(tmp, "while")!= string::npos)
 					{
-						if (isPrintKeyword)
+						if (print_cmplx)
 							loopLevel.push_back("while");
 						found_while = true;
 					}
-					else if (isPrintKeyword)
+					else if (print_cmplx)
 					{
 						if (CUtil::FindKeyword(tmp, "for") != string::npos)
 							loopLevel.push_back("for");
@@ -621,8 +623,8 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 						// record nested loop level
 						if (CUtil::FindKeyword(tmp, "if") == string::npos)
 						{
-							unsigned int loopCnt = 0;
-							for (StringVector::iterator lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
+							loopCnt = 0;
+							for (lit = loopLevel.begin(); lit < loopLevel.end(); lit++)
 							{
 								if ((*lit) != "")
 									loopCnt++;
@@ -644,7 +646,7 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 				if (paren_cnt == 0) 
 				{
 					// handle 'for', 'foreach', 'while', 'if'
-					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+					strSize = CUtil::TruncateLine(i + 1 - start, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 					if (strSize > 0)
 					{
 						strLSLOC += line.substr(start, strSize);
@@ -668,7 +670,7 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 				if (!inArrayDec) start = i + 1;
 
 			// record close bracket for nested loop processing
-			if (isPrintKeyword)
+			if (print_cmplx)
 			{
 				if (openBrackets > 0)
 					openBrackets--;
@@ -694,7 +696,7 @@ void CJavascriptCounter::LSLOC(results* result, string line, string lineBak, str
 	}
 
 	tmp = CUtil::TrimString(line.substr(start, i - start));
-	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+	strSize = CUtil::TruncateLine(tmp.length(), strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 	if (strSize > 0)
 	{
 		strLSLOC += tmp.substr(0, strSize);

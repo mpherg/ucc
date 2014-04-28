@@ -13,7 +13,8 @@
 */
 CCodeCounter::CCodeCounter()
 {
-	isPrintKeyword = false;
+	print_cmplx = false;
+	lsloc_truncate = DEFAULT_TRUNCATE;
 	QuoteStart = "";
 	QuoteEnd = "";
 	QuoteEscapeFront = 0;
@@ -104,7 +105,7 @@ int CCodeCounter::CountSLOC(filemap* fmap, results* result)
 
 	CountCommentsSLOC(&fmapMod, result, &fmapModBak);
 
-	if (isPrintKeyword)
+	if (print_cmplx)
 		CountComplexity(&fmapMod, result);
 
 	CountDirectiveSLOC(&fmapMod, result, &fmapModBak);
@@ -121,8 +122,14 @@ int CCodeCounter::CountSLOC(filemap* fmap, results* result)
 *
 * \return whether file extension is supported
 */
-bool CCodeCounter::IsSupportedFileExtension(string file_name)
+bool CCodeCounter::IsSupportedFileExtension(const string &file_name)
 {
+	// if Makefile, check whether name equals MAKEFILE since no extension exists
+	if (classtype == MAKEFILE && file_name.size() >= 8)
+	{
+		if (CUtil::ToLower(file_name.substr(file_name.size() - 8)) == "makefile")
+			return true;
+	}
 	size_t idx = file_name.find_last_of(".");
 	if (idx == string::npos)
 		return false;
@@ -559,15 +566,15 @@ int CCodeCounter::FindCommentStart(string strline, size_t &idx_start, int &comme
 		comment_type = 0;
 		idx_start = idx_line;
 	}
-	else if (idx_line > idx_block)
-	{
-		idx_start = idx_block;
-		comment_type = idx_start == 0 ? 3 : 4;
-	}
-	else
+	else if (idx_block > idx_line)
 	{
 		idx_start = idx_line;
 		comment_type = idx_start == 0 ? 1 : 2;
+	}
+	else
+	{
+		idx_start = idx_block;
+		comment_type = idx_start == 0 ? 3 : 4;
 	}
 	return 1;
 }
@@ -585,10 +592,32 @@ int CCodeCounter::CountComplexity(filemap* fmap, results* result)
 	if (classtype == UNKNOWN || classtype == DATAFILE)
 		return 0;
 	filemap::iterator fit;
-	unsigned int cnt;
-	string line;
+	size_t idx;
+	unsigned int cnt, ret, cyclomatic_cnt = 0, ignore_cyclomatic_cnt = 0, main_cyclomatic_cnt = 0;
+	string line, lastline, file_ext, function_name = "";
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
+	StringVector function_stack;
+	stack<unsigned int> cyclomatic_stack;
+	bool process_cyclomatic_complexity = false;
 
+	// check whether to process cyclomatic complexity
+	if (cmplx_cyclomatic_list.size() > 0)
+	{
+		process_cyclomatic_complexity = true;
+		if (skip_cmplx_cyclomatic_file_extension_list.size() > 0)
+		{
+			idx = result->file_name.find_last_of(".");
+			if (idx != string::npos)
+			{
+				file_ext = result->file_name.substr(idx);
+				file_ext = CUtil::ToLower(file_ext);
+				if (find(skip_cmplx_cyclomatic_file_extension_list.begin(), skip_cmplx_cyclomatic_file_extension_list.end(), file_ext) != skip_cmplx_cyclomatic_file_extension_list.end())
+					process_cyclomatic_complexity = false;
+			}
+		}
+	}
+
+	// process each line
 	for (fit = fmap->begin(); fit != fmap->end(); fit++)
 	{
 		line = fit->line;
@@ -642,7 +671,70 @@ int CCodeCounter::CountComplexity(filemap* fmap, results* result)
 		cnt = 0;
 		CUtil::CountTally(line, cmplx_pointer_list, cnt, 1, exclude, "", "", &result->cmplx_pointer_count, casesensitive);
 		result->cmplx_pointer_lines += cnt;
+
+		// cyclomatic complexity
+		if (process_cyclomatic_complexity)
+		{
+			// search for cyclomatic complexity keywords
+			CUtil::CountTally(line, cmplx_cyclomatic_list, cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
+
+			// search for keywords to exclude
+			if (ignore_cmplx_cyclomatic_list.size() > 0)
+				CUtil::CountTally(line, ignore_cmplx_cyclomatic_list, ignore_cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
+
+			// parse function name if found
+			ret = ParseFunctionName(line, lastline, function_stack, function_name);
+			if (ret != 1 && !cyclomatic_stack.empty() && cyclomatic_stack.size() == function_stack.size())
+			{
+				// remove count stack entry for non-function names
+				cyclomatic_cnt += cyclomatic_stack.top();
+				ignore_cyclomatic_cnt = 0;
+				cyclomatic_stack.pop();
+			}
+			if (ret == 1)
+			{
+				// capture count at end of function
+				lineElement element(cyclomatic_cnt - ignore_cyclomatic_cnt + 1, function_name);
+				result->cmplx_cycfunct_count.push_back(element);
+
+				if (!function_stack.empty())
+				{
+					// grab previous function from stack to continue
+					if (!cyclomatic_stack.empty())
+					{
+						cyclomatic_cnt = cyclomatic_stack.top();
+						cyclomatic_stack.pop();
+					}
+				}
+				else
+					cyclomatic_cnt = 0;
+				function_name = "";
+				ignore_cyclomatic_cnt = 0;
+			}
+			else if (ret == 2)
+			{
+				// some code doesn't belong to any function
+				main_cyclomatic_cnt += cyclomatic_cnt - ignore_cyclomatic_cnt;
+				if (main_cyclomatic_cnt < 1)
+					main_cyclomatic_cnt = 1;	// add 1 for main function here in case no other decision points are found in main
+				cyclomatic_cnt = ignore_cyclomatic_cnt = 0;
+			}
+			else if (!function_stack.empty() && (function_stack.size() > cyclomatic_stack.size() + 1 || (cyclomatic_stack.empty() && function_stack.size() > 1)))
+			{
+				// capture previous complexity count from open function
+				cyclomatic_stack.push(cyclomatic_cnt - ignore_cyclomatic_cnt);
+				cyclomatic_cnt = ignore_cyclomatic_cnt = 0;
+			}
+		}
 	}
+
+	// done with a file, if has "main" code add it
+	if (main_cyclomatic_cnt > 0)
+	{
+		lineElement element(main_cyclomatic_cnt, "main");
+		result->cmplx_cycfunct_count.push_back(element);
+	}
+
 	return 1;
 }
 
@@ -664,4 +756,20 @@ int CCodeCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 			result->exec_lines[PHY]++;
 	}
 	return 1;
+}
+
+/*!
+* Parses lines for function/method names.
+* This method is typically implemented in the specific language sub-class.
+*
+* \param line line to be processed
+* \param lastline last line processed
+* \param functionStack stack of functions
+* \param functionName function name found
+*
+* \return 1 if function name is found
+*/
+int CCodeCounter::ParseFunctionName(const string &line, string &lastline, StringVector &functionStack, string &functionName)
+{
+	return 0;
 }

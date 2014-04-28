@@ -242,6 +242,14 @@
 				>
 			</File>
 			<File
+				RelativePath="src\CMakefileCounter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="src\CMatlabCounter.cpp"
+				>
+			</File>
+			<File
 				RelativePath="src\CMidasCounter.cpp"
 				>
 			</File>
@@ -291,6 +299,14 @@
 			</File>
 			<File
 				RelativePath="src\CVbscriptCounter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="src\CVerilogCounter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="src\CVHDLCounter.cpp"
 				>
 			</File>
 			<File
@@ -388,6 +404,14 @@
 				>
 			</File>
 			<File
+				RelativePath="src\CMakefileCounter.h"
+				>
+			</File>
+			<File
+				RelativePath="src\CMatlabCounter.h"
+				>
+			</File>
+			<File
 				RelativePath="src\CMidasCounter.h"
 				>
 			</File>
@@ -437,6 +461,14 @@
 			</File>
 			<File
 				RelativePath="src\CVbscriptCounter.h"
+				>
+			</File>
+			<File
+				RelativePath="src\CVerilogCounter.h"
+				>
+			</File>
+			<File
+				RelativePath="src\CVHDLCounter.h"
 				>
 			</File>
 			<File

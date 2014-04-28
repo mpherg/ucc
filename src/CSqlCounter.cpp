@@ -474,10 +474,10 @@ int CSqlCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap
 */
 void CSqlCounter::LSLOC(results* result, string line, string lineBak, string &strLSLOC, string &strLSLOCBak, bool &data_continue)
 {
-	size_t i, j, ind, nextInd, startInd, endInd, strSize;
+	size_t i, ind, nextInd, startInd, endInd, strSize;
+	ptrdiff_t j;
 	bool trunc_flag	= false, found;
-	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
-	string exec_keyword, data_keyword, gstr;
+	string exec_keyword, data_keyword;
 	list<size_t> slocIndices, eslocIndices, dslocIndices, gslocIndices;
 
 	// find locations of executable keywords
@@ -599,7 +599,7 @@ void CSqlCounter::LSLOC(results* result, string line, string lineBak, string &st
 		// process continuation
 		if (strLSLOCBak.length() > 0)
 		{
-			strSize = CUtil::TruncateLine(startInd, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(startInd, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC += line.substr(0, strSize);
@@ -628,7 +628,7 @@ void CSqlCounter::LSLOC(results* result, string line, string lineBak, string &st
 		// process LSLOC
 		if (endInd != string::npos)
 		{
-			strSize = CUtil::TruncateLine(endInd - startInd, 0, result->lsloc_truncate, trunc_flag);
+			strSize = CUtil::TruncateLine(endInd - startInd, 0, this->lsloc_truncate, trunc_flag);
 			if (strSize > 0)
 			{
 				strLSLOC = line.substr(startInd, strSize);
@@ -649,7 +649,7 @@ void CSqlCounter::LSLOC(results* result, string line, string lineBak, string &st
 	// capture continuing LSLOC
 	if (startInd < line.length())
 	{
-		strSize = CUtil::TruncateLine(line.length() - startInd, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+		strSize = CUtil::TruncateLine(line.length() - startInd, strLSLOC.length(), this->lsloc_truncate, trunc_flag);
 		if (strSize > 0)
 		{
 			strLSLOC += line.substr(startInd, strSize);
